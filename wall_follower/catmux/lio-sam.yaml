@@ -1,0 +1,34 @@
+---
+common:
+  default_window: nova_station_window
+windows:
+  - name: gazebo_sim
+    command
+  - name: nova_bringup
+    commands:
+      - source $HOME/.bashrc
+      - echo "Nova start"
+      - cd ../
+      - ./connectNova.sh
+      - ./waitConnection.sh
+      - roslaunch --wait dobot_bringup bringup.launch
+  - name: nova_station_window
+    commands:
+      - source $HOME/.bashrc
+      - echo "nova_station"
+      - cd ../
+      - ./connectNova.sh
+      - ./waitConnection.sh
+      # - roslaunch --wait nova_station nova_with_camera.launch
+      - roslaunch --wait nova_station nova_station.launch
+  - name: nova_controller_window
+    commands:
+      - source $HOME/.bashrc
+      - echo "nova controller start"
+      - ssh juden@127.0.0.1
+      - roslaunch --wait nova_station nova_action_servers.launch
+  - name: nova_station_status_window
+    commands:
+      - source $HOME/.bashrc
+      - echo "nova_station_status_window"
+      - rostopic echo /nova_station_status

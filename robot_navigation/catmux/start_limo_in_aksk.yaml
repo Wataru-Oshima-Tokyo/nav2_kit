@@ -1,0 +1,21 @@
+---
+common:
+  default_window: limo_aksk
+parameters:
+  hostname: localhost
+windows:
+  - name: limo_aksk
+    commands:
+      - ros2 launch sim_worlds2 limo_aksk.launch.py
+  - name: robot_localization
+    commands:
+      - sleep 20
+      - ros2 launch robot_navigation robot_localization.launch.py
+  - name: rcs_client2 launch
+    commands:
+      - sleep 25
+      - ros2 launch robot_navigation robot_navigation.launch.py
+  - name: control
+    commands:
+      - echo "start navigation"
+      - ros2 topic echo /cmd_vel
