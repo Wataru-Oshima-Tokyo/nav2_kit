@@ -30,12 +30,12 @@ def generate_launch_description():
                 'transform_tolerance': 0.01,
                 'min_height': 0.0,
                 'max_height': 2.0,
-                'angle_min': -math.pi / 3,
-                'angle_max': math.pi / 3,
+                'angle_min': -math.pi,
+                'angle_max': math.pi,
                 'angle_increment': 0.0087,  # M_PI/360.0
                 'scan_time': 0.3333,
                 'range_min': 0.1,
-                'range_max': 6.0,
+                'range_max': 8.0,
                 'use_inf': False,
                 'inf_epsilon': 4.0
             }],
@@ -49,9 +49,9 @@ def generate_launch_description():
                 'target_frame': 'cloud2',
                 'transform_tolerance': 0.01,
                 'min_height': 3.0,
-                'max_height': 10.0,
-                'angle_min': -3.14,  # -M_PI/2
-                'angle_max': 3.14,  # M_PI/2
+                'max_height': 15.0,
+                'angle_min': -math.pi,  # -M_PI/2
+                'angle_max': math.pi,  # M_PI/2
                 'angle_increment': 0.0087,  # M_PI/360.0
                 'scan_time': 0.3333,
                 'range_min': 0.1,

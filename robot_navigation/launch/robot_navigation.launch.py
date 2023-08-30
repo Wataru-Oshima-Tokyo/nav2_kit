@@ -23,7 +23,8 @@ def generate_launch_description():
         'robot_navigation'), 'config', 'waypoint_follower_robot.yaml')
 
     remappings = [('/tf', 'tf'),
-                ('/tf_static', 'tf_static')]
+                ('/tf_static', 'tf_static'),
+                ('/cmd_vel', 'nav_cmd_vel')]
 
     return LaunchDescription([
 
