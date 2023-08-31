@@ -4,22 +4,34 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
+import distro
+
+def get_ros2_distro():
+    ubuntu_version = distro.version()
+    if ubuntu_version == '20.04':
+        return 'foxy'
+    elif ubuntu_version == '22.04':
+        return 'humble'
+    else:
+        return 'unknown'
+
 
 def launch_setup(context, *args, **kwargs):
-
+    ros2_distro = get_ros2_distro()
+    print('ROS 2 Distro:', ros2_distro)
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     robot_name = LaunchConfiguration('robot_name').perform(context)
 
     default_nav_to_pose_bt_xml_robot = os.path.join(get_package_share_directory(
-    'robot_navigation'), 'config', robot_name, 'nav_to_pose.xml')
+    'robot_navigation'), 'config', robot_name, ros2_distro, 'nav_thr_poses.xml')
     controller_yaml_robot = os.path.join(get_package_share_directory(
-        'robot_navigation'), 'config', robot_name, 'controller_robot.yaml')
+        'robot_navigation'), 'config', robot_name, ros2_distro, 'controller_robot.yaml')
     bt_navigator_yaml_robot = os.path.join(get_package_share_directory(
-        'robot_navigation'), 'config', robot_name, 'bt_navigator_robot.yaml')
+        'robot_navigation'), 'config', robot_name, ros2_distro, 'bt_navigator_robot.yaml')
     planner_yaml_robot = os.path.join(get_package_share_directory(
-        'robot_navigation'), 'config', robot_name, 'planner_server_robot.yaml')
+        'robot_navigation'), 'config', robot_name, ros2_distro, 'planner_server_robot.yaml')
     recovery_yaml_robot = os.path.join(get_package_share_directory(
-        'robot_navigation'), 'config', robot_name, 'recovery_robot.yaml')
+        'robot_navigation'), 'config', robot_name, ros2_distro, 'recovery_robot.yaml')
 
     waypoints_yaml_robot = os.path.join(get_package_share_directory(
         'robot_navigation'), 'config', 'waypoint_follower_robot.yaml')
@@ -28,7 +40,24 @@ def launch_setup(context, *args, **kwargs):
                 ('/tf_static', 'tf_static'),
                 ('/cmd_vel', 'nav_cmd_vel')]
 
-
+    if (ros2_distro=="humble"):
+        behavior_node =  Node(
+            package='nav2_behaviors',
+            executable='behavior_server',
+            name='behavior_server',
+            parameters=[recovery_yaml_robot],
+            output='screen',
+            remappings=remappings
+            )
+    else:
+        behavior_node =  Node(
+            package='nav2_recoveries',
+            executable='recoveries_server',
+            name='recoveries_server',
+            output='screen',
+            parameters=[recovery_yaml_robot],
+            remappings=remappings
+        )
 
 
     return [
@@ -49,15 +78,8 @@ def launch_setup(context, *args, **kwargs):
             parameters=[planner_yaml_robot],
             remappings=remappings
         ),
+        
 
-        Node(
-            package='nav2_recoveries',
-            executable='recoveries_server',
-            name='recoveries_server',
-            output='screen',
-            parameters=[recovery_yaml_robot],
-            remappings=remappings
-        ),
 
         Node(
             namespace='',

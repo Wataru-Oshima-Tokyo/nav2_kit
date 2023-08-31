@@ -7,14 +7,25 @@ from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, Opaq
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.substitutions import FindPackageShare
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+import distro
 
+def get_ros2_distro():
+    ubuntu_version = distro.version()
+    if ubuntu_version == '20.04':
+        return 'foxy'
+    elif ubuntu_version == '22.04':
+        return 'humble'
+    else:
+        return 'unknown'
 
 def launch_setup(context, *args, **kwargs):
+    ros2_distro = get_ros2_distro()
+    print('ROS 2 Distro:', ros2_distro)
     map_name = LaunchConfiguration('map_name').perform(context)
     lidar_type = LaunchConfiguration('lidar_type').perform(context)
     robot_name = LaunchConfiguration('lidar_type').perform(context)
     robot_amcl_config = os.path.join(get_package_share_directory(
-        'robot_navigation'), 'config', robot_name, 'robot_amcl.yaml')
+        'robot_navigation'), 'config', robot_name, ros2_distro, 'robot_amcl.yaml')
     robot_nav_pkg = FindPackageShare(package='robot_navigation').find('robot_navigation')   
     
     map_file = os.path.join(get_package_share_directory('sim_worlds2'),
