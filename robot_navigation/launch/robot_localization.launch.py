@@ -12,8 +12,9 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 def launch_setup(context, *args, **kwargs):
     map_name = LaunchConfiguration('map_name').perform(context)
     lidar_type = LaunchConfiguration('lidar_type').perform(context)
+    robot_name = LaunchConfiguration('lidar_type').perform(context)
     robot_amcl_config = os.path.join(get_package_share_directory(
-        'robot_navigation'), 'config', 'robot_amcl.yaml')
+        'robot_navigation'), 'config', robot_name, 'robot_amcl.yaml')
     robot_nav_pkg = FindPackageShare(package='robot_navigation').find('robot_navigation')   
     
     map_file = os.path.join(get_package_share_directory('sim_worlds2'),
@@ -71,10 +72,12 @@ def generate_launch_description():
 
     map_name_arg = DeclareLaunchArgument('map_name', default_value='sh.yaml', description='Name of the map')
     lidar_type_arg = DeclareLaunchArgument('lidar_type', default_value='velodyne', description='Type of lidar')
+    robot_name_arg = DeclareLaunchArgument('robot_name', default_value='limo_ackermann', description='Robot Name')
     
 
     return LaunchDescription([
         map_name_arg,
         lidar_type_arg,
+        robot_name_arg,
         OpaqueFunction(function=launch_setup)
     ])

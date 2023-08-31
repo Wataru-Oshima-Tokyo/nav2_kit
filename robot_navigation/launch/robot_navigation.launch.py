@@ -2,22 +2,24 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 
-def generate_launch_description():
+def launch_setup(context, *args, **kwargs):
 
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
-    
+    robot_name = LaunchConfiguration('robot_name').perform(context)
+
     default_nav_to_pose_bt_xml_robot = os.path.join(get_package_share_directory(
-    'robot_navigation'), 'config', 'behavior_robot.xml')
+    'robot_navigation'), 'config', robot_name, 'nav_to_pose.xml')
     controller_yaml_robot = os.path.join(get_package_share_directory(
-        'robot_navigation'), 'config', 'controller_robot.yaml')
+        'robot_navigation'), 'config', robot_name, 'controller_robot.yaml')
     bt_navigator_yaml_robot = os.path.join(get_package_share_directory(
-        'robot_navigation'), 'config', 'bt_navigator_robot.yaml')
+        'robot_navigation'), 'config', robot_name, 'bt_navigator_robot.yaml')
     planner_yaml_robot = os.path.join(get_package_share_directory(
-        'robot_navigation'), 'config', 'planner_server_robot.yaml')
+        'robot_navigation'), 'config', robot_name, 'planner_server_robot.yaml')
     recovery_yaml_robot = os.path.join(get_package_share_directory(
-        'robot_navigation'), 'config', 'recovery_robot.yaml')
+        'robot_navigation'), 'config', robot_name, 'recovery_robot.yaml')
 
     waypoints_yaml_robot = os.path.join(get_package_share_directory(
         'robot_navigation'), 'config', 'waypoint_follower_robot.yaml')
@@ -26,10 +28,10 @@ def generate_launch_description():
                 ('/tf_static', 'tf_static'),
                 ('/cmd_vel', 'nav_cmd_vel')]
 
-    return LaunchDescription([
 
-        # Nodes for robot
 
+
+    return [
         Node(
             package='nav2_controller',
             executable='controller_server',
@@ -94,12 +96,15 @@ def generate_launch_description():
                             'waypoint_follower'
                         ]}]),
 
-        # Node(
-        #     namespace='',
-        #     package='rviz2',
-        #     executable='rviz2',
-        #     name='rviz2',
-        #     arguments=['-d', robot_rviz_config_dir],
-        #     parameters=[{'use_sim_time': use_sim_time}],
-        #     output='screen'),
+
+    ]
+def generate_launch_description():
+    robot_name_arg = DeclareLaunchArgument('robot_name', default_value='limo_ackermann', description='Robot Name')
+
+
+
+    return LaunchDescription([
+        robot_name_arg,
+        OpaqueFunction(function=launch_setup)
+
     ])
