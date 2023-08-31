@@ -3,23 +3,30 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import IncludeLaunchDescription, ExecuteProcess
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.substitutions import FindPackageShare
+from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
+    # Declare map argument
+    map_name = DeclareLaunchArgument('map_name', default_value='akskR3.yaml', description='Name of the map')
+    
     robot_amcl_config = os.path.join(get_package_share_directory(
         'robot_navigation'), 'config', 'robot_amcl.yaml')
     map_config = os.path.join(get_package_share_directory(
         'robot_navigation'), 'config', 'map_config.yaml')
     robot_nav_pkg = FindPackageShare(package='robot_navigation').find('robot_navigation')   
+    
     map_file = os.path.join(get_package_share_directory('sim_worlds2'),
         'maps',
-        'akskR3.yaml')
+        LaunchConfiguration('map_name'))
+
     remappings = [('/tf', 'tf'),
                   ('/tf_static', 'tf_static')]
 
     return LaunchDescription([
+        map_name,
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(robot_nav_pkg, 'launch', 'velodyne_to_scan_for_navigation.launch.py')
@@ -29,10 +36,7 @@ def generate_launch_description():
             package='robot_navigation',
             executable='safety_net',
             name='emergency_stop',
-            output='screen',
-            parameters=[{'use_sim_time': True},
-                        {'autostart': True},
-                        {'node_names': ['map_server', 'amcl']}]
+            output='screen'
         ),
         Node(
             package='nav2_map_server',
@@ -53,8 +57,6 @@ def generate_launch_description():
             parameters=[robot_amcl_config],
             remappings=remappings
         ),
-
-
 
         Node(
             package='nav2_lifecycle_manager',
