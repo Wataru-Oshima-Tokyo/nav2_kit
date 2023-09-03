@@ -8,11 +8,11 @@ public:
     WallFollower()
         : Node("wall_follower")
     {
-        publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+        publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("limo/cmd_vel", 10);
         scan_subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
             "/scan", rclcpp::SensorDataQoS(), std::bind(&WallFollower::scan_callback, this, std::placeholders::_1));
         cmd_vel_subscription_ = this->create_subscription<geometry_msgs::msg::Twist>(
-            "/nav_cmd_vel", rclcpp::SensorDataQoS(), std::bind(&WallFollower::cmd_vel_callback, this, std::placeholders::_1));
+            "/cmd_vel", rclcpp::SensorDataQoS(), std::bind(&WallFollower::cmd_vel_callback, this, std::placeholders::_1));
     }
 
 private:
@@ -52,8 +52,18 @@ private:
     }
 
     void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
-    {
-        twist.angular.z = msg->angular.z; 
+    {   
+        
+        if(fabs(msg->angular.z) < 0.5){
+            twist.angular.z = 0.5;
+            if (msg->angular.z < 0){
+                twist.angular.z  *= -1;
+            }
+            RCLCPP_WARN(this->get_logger(), "CHANGED CMD_VEL");
+        }else{
+            twist.angular.z = msg->angular.z; 
+
+        }
         if(!warning || msg->linear.x < twist.linear.x)
             twist.linear.x = msg->linear.x; 
         publisher_->publish(twist);

@@ -10,15 +10,18 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     map_file = os.path.join(get_package_share_directory('sim_worlds2'),
             'maps',
-            'akskR3.yaml')
-
+            'shimizu.yaml')
+    map_config = os.path.join(get_package_share_directory(
+        'robot_navigation'), 'config', 'limo_ackermann', 'humble', 'map_config.yaml')
     return LaunchDescription([
         Node(
             package='nav2_map_server',
             executable='map_server',
             name='map_server',
+            respawn=True,
             output='screen',
-            parameters=[{'use_sim_time': True},
+            parameters=[map_config,
+                        {'use_sim_time': True},
                         {'topic_name': "map"},
                         {'frame_id': "map"},
                         {'yaml_filename': map_file}]

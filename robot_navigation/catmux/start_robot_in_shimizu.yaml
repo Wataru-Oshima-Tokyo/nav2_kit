@@ -1,0 +1,26 @@
+---
+common:
+  default_window: robot_navigation
+parameters:
+  robot_name: limo_ackermann
+  map_name: shimizu
+  map_filter_name: shimizu_keepout
+  lidar_type: velodyne
+  use_simulator: True
+  headless: True
+windows:
+  - name: lidar_util
+    commands:
+      - ros2 launch robot_navigation robot_lidar_util.launch.py lidar_type:=${lidar_type} 
+  - name: keepout_filter
+    commands: 
+      - ros2 launch robot_navigation robot_keepout_filter.launch.py map_filter_name:=${map_filter_name}
+  - name: robot_navigation
+    commands: 
+      - ros2 launch robot_navigation robot_navigation.launch.py map_name:=${map_name}.yaml robot_name:=${robot_name}
+  - name: limo_aksk
+    commands:
+      - sleep 5
+      - ros2 launch sim_worlds2 robot_shimizu.launch.py use_simulator:=${use_simulator} headless:=${headless}
+
+

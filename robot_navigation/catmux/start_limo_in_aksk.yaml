@@ -1,25 +1,22 @@
 ---
 common:
-  default_window: limo_aksk
+  default_window: robot_navigation
 parameters:
   robot_name: limo_ackermann
   map_name: akskR3
   lidar_type: velodyne
-  gui: True
-  headless: False
+  gui: False
+  headless: True
 windows:
+  - name: lidar_util
+    commands:
+      - ros2 launch robot_navigation robot_lidar_util.launch.py lidar_type:=${lidar_type} 
+  - name: robot_navigation
+    commands: 
+      - ros2 launch robot_navigation robot_navigation.launch.py map_name:=${map_name}.yaml robot_name:=${robot_name}
   - name: limo_aksk
     commands:
+      - sleep 5
       - ros2 launch sim_worlds2 limo_aksk.launch.py gui:=${gui} headless:=${headless}
-  - name: robot_localization
-    commands:
-      - sleep 20
-      - ros2 launch robot_navigation robot_localization.launch.py map_name:=${map_name}.yaml lidar_type:=${lidar_type} robot_name:=${robot_name}
-  - name: rcs_client2 launch
-    commands:
-      - sleep 25
-      - ros2 launch robot_navigation robot_navigation.launch.py robot_name:=${robot_name}
-  - name: control
-    commands:
-      - echo "start navigation"
-      - ros2 topic echo /cmd_vel
+
+
