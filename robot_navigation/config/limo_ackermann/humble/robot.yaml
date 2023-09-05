@@ -50,7 +50,7 @@ bt_navigator:
     use_sim_time: True
     global_frame: map
     robot_base_frame: base_link
-    odom_topic: /odom
+    odom_topic: odom
     bt_loop_duration: 10
     default_server_timeout: 20
     default_nav_to_pose_bt_xml: '/home/wataru/humble_ws/install/robot_navigation/share/robot_navigation/config/limo_ackermann/humble/nav_to_pose_and_pause_near_goal_obstacle.xml'
@@ -412,7 +412,7 @@ velocity_smoother:
     min_velocity: [-0.3, 0.0, -2.0]
     max_accel: [0.5, 0.0, 1.2]
     max_decel: [-2.5, 0.0, -3.2]
-    odom_topic: "odom"
+    odom_topic: odom
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0

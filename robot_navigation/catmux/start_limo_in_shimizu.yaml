@@ -1,6 +1,6 @@
 ---
 common:
-  default_window: robot_navigation
+  default_window: lidar_util
 parameters:
   robot_name: limo_ackermann
   map_name: shimizu

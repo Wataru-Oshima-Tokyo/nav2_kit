@@ -16,8 +16,8 @@ find_package(tf2_ros REQUIRED)
 
 add_executable(cmdvel_to_odom src/cmdvel_to_odom.cpp)
 ament_target_dependencies(cmdvel_to_odom rclcpp std_msgs sensor_msgs nav_msgs geometry_msgs tf2 tf2_ros )
-add_executable(safety_net src/safety_net.cpp)
-ament_target_dependencies(safety_net rclcpp sensor_msgs geometry_msgs)
+add_executable(safety_relay src/safety_relay.cpp)
+ament_target_dependencies(safety_relay rclcpp sensor_msgs geometry_msgs nav_msgs)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -32,7 +32,7 @@ if(BUILD_TESTING)
 endif()
 
 install(
-  TARGETS cmdvel_to_odom safety_net
+  TARGETS cmdvel_to_odom safety_relay
   DESTINATION lib/${PROJECT_NAME}
 )
 
