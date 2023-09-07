@@ -6,8 +6,8 @@ parameters:
   map_name: shimizu
   map_filter_name: shimizu_keepout
   lidar_type: velodyne
-  gui: True
-  headless: False
+  gui: False
+  headless: True
 windows:
   - name: lidar_util
     commands:
