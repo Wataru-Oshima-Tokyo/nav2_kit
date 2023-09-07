@@ -1,22 +1,17 @@
 <?xml version="1.0"?>
 <robot name="limo_xacro" xmlns:xacro="http://ros.org/wiki/xacro">
-    <xacro:include filename="inertial_macros.xacro"/>
     <xacro:macro name="limo_wheel" params="parent_prefix wheel_prefix reflect *joint_pose">
         <link name="${wheel_prefix}_wheel_link">
-            <!-- <inertial>
+            <inertial>
                 <origin xyz="0 0 0" />
                 <mass value="0.5" />
                 <inertia ixx="0.01055" ixy="0" ixz="0" iyy="0.00075" iyz="0" izz="0.01055" />
-            </inertial> -->        
-            <xacro:inertial_cylinder mass="0.5" length="${wheel_length}" radius="${wheel_radius}">
-                 <origin xyz="0 0 0" rpy="0 0 0"/>
-            </xacro:inertial_cylinder>
+            </inertial>
             <visual>
-                <origin xyz="0 ${wheel_length/2} 0" rpy="1.57 0 0" />
+                <origin xyz="0 0 0" rpy="0 0 0" />
                 <geometry>
-                    <cylinder radius="${wheel_radius}" length="${wheel_length}"/>
+                    <mesh filename="file://$(find limo_description)/meshes/limo_wheel.dae" />
                 </geometry>
-                <!-- <material name="blue"/> -->
             </visual>
             <collision>
               <origin xyz="0 ${wheel_length/2} 0" rpy="1.57 0 0" />
@@ -24,6 +19,8 @@
                   <cylinder length="${wheel_length}" radius="${wheel_radius}" />
               </geometry>
             </collision>
+
+
         </link>
 
         <joint name="${wheel_prefix}_wheel" type="continuous">
