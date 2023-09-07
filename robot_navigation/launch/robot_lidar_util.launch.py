@@ -21,8 +21,8 @@ def launch_setup(context, *args, **kwargs):
         ),
         Node(
             package='robot_navigation',
-            executable='safety_net',
-            name='emergency_stop',
+            executable='safety_relay',
+            name='safety_relay',
             output='screen'
         )
     ]

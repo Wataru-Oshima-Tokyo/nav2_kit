@@ -1,15 +1,18 @@
 
  
+
+
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription,RegisterEventHandler
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
- 
- 
+from ament_index_python.packages import get_package_share_directory
+from launch.event_handlers import OnProcessExit
+
 def generate_launch_description():
  
   # Constants for paths to different files and folders
@@ -113,24 +116,17 @@ def generate_launch_description():
     parameters=[{'robot_description': Command(['xacro ', urdf_model]),'use_sim_time': use_sim_time}]
     )
  
-  # Publish the joint states of the robot
-  start_joint_state_publisher_cmd = Node(
-    package='joint_state_publisher',
-    executable='joint_state_publisher',
-    name='joint_state_publisher',
-    condition=UnlessCondition(gui),
-    parameters=[{'use_sim_time': use_sim_time}])
-    
-  start_joint_state_publisher_gui_node = Node(
-    condition=IfCondition(gui),
-    package='joint_state_publisher_gui',
-    executable='joint_state_publisher_gui',
-    name='joint_state_publisher_gui',
-    parameters=[{'use_sim_time': use_sim_time}])
-  # start_dummy_sensors=Node(
-  #   package='dummy_sensors', 
-  #   node_executable='dummy_joint_states', 
-  #   output='screen')
+  load_joint_state_controller = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
+             'joint_state_broadcaster'],
+        output='screen'
+    )
+
+  load_diff_drive_base_controller = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
+             'diff_drive_base_controller'],
+        output='screen'
+    )
 
   # Launch RViz
   start_rviz_cmd = Node(
@@ -184,6 +180,18 @@ def generate_launch_description():
   ld.add_action(start_gazebo_client_cmd)
   ld.add_action(spawn_entity_cmd)
   ld.add_action(start_robot_state_publisher_cmd)
+  ld.add_action(RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=spawn_entity_cmd,
+            on_exit=[load_joint_state_controller],
+        )
+    ))
+  ld.add_action(RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=load_joint_state_controller,
+            on_exit=[load_diff_drive_base_controller],
+        )
+    ))
   # ld.add_action(start_joint_state_publisher_gui_node)
   # ld.add_action(start_joint_state_publisher_cmd)
   ld.add_action(start_rviz_cmd)

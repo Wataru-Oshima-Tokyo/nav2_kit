@@ -1,13 +1,13 @@
 ---
 common:
-  default_window: robot_navigation
+  default_window: lidar_util
 parameters:
   robot_name: limo_ackermann
   map_name: shimizu
   map_filter_name: shimizu_keepout
   lidar_type: velodyne
-  gui: False
-  headless: True
+  gui: True
+  headless: False
 windows:
   - name: lidar_util
     commands:

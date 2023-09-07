@@ -34,7 +34,7 @@ endif()
 
 
 install(
-  DIRECTORY launch  meshes rviz urdf 
+  DIRECTORY launch  meshes rviz urdf config
   DESTINATION share/${PROJECT_NAME}/
 )
 

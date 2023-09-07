@@ -48,16 +48,16 @@ def launch_setup(context, *args, **kwargs):
 def generate_launch_description():
     map_name_arg = DeclareLaunchArgument('map_name', default_value='akskR3.yaml', description='Name of the map')
     robot_name_arg = DeclareLaunchArgument('robot_name', default_value='limo_ackermann', description='Robot Name')
-    map_to_odom_node =  Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name='map_to_odom',
-            arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom']
-        )
+    # map_to_odom_node =  Node(
+    #         package='tf2_ros',
+    #         executable='static_transform_publisher',
+    #         name='map_to_odom',
+    #         arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom']
+    #     )
     return LaunchDescription([
         map_name_arg,
         robot_name_arg,
-        map_to_odom_node,
+        # map_to_odom_node,
         OpaqueFunction(function=launch_setup)
 
     ])
