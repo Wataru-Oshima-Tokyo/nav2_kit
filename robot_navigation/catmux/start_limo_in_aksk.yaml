@@ -3,7 +3,7 @@ common:
   default_window: robot_navigation
 parameters:
   robot_name: limo_ackermann
-  map_name: akskR3
+  map_name: aksk
   lidar_type: velodyne
   gui: False
   headless: True

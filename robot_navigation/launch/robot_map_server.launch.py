@@ -10,7 +10,7 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     map_file = os.path.join(get_package_share_directory('sim_worlds2'),
             'maps',
-            'shimizu.yaml')
+            'aksk.yaml')
     map_config = os.path.join(get_package_share_directory(
         'robot_navigation'), 'config', 'limo_ackermann', 'humble', 'map_config.yaml')
     return LaunchDescription([
