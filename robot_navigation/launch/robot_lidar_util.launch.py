@@ -19,12 +19,12 @@ def launch_setup(context, *args, **kwargs):
                 os.path.join(share_dir, 'launch', str(lidar_type+'_to_scan.launch.py'))
             ),
         ),
-        Node(
-            package='robot_navigation',
-            executable='safety_relay',
-            name='safety_relay',
-            output='screen'
-        )
+        # Node(
+        #     package='robot_navigation',
+        #     executable='safety_relay',
+        #     name='safety_relay',
+        #     output='screen'
+        # )
     ]
 
 def generate_launch_description():

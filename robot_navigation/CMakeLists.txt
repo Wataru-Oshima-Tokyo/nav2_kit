@@ -40,6 +40,7 @@ install(DIRECTORY
   launch
   config
   src
+  param
   DESTINATION share/${PROJECT_NAME}/
 )
 ament_package()

@@ -13,7 +13,7 @@ windows:
       - ros2 launch robot_navigation robot_lidar_util.launch.py lidar_type:=${lidar_type} 
   - name: robot_navigation
     commands: 
-      - ros2 launch robot_navigation robot_navigation.launch.py map_name:=${map_name}.yaml robot_name:=${robot_name}
+      - ros2 launch robot_navigation nav2_start.launch.py map_name:=${map_name}.yaml
   - name: limo_aksk
     commands:
       - sleep 5
