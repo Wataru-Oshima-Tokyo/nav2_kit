@@ -24,7 +24,8 @@ def generate_launch_description():
                 'range_min': 0.1,
                 'range_max': 8.0,
                 'use_inf': False,
-                'inf_epsilon': 4.0
+                'inf_epsilon': 4.0,
+                'use_sim_time': True
             }],
             name='pointcloud_to_laserscan_for_move'
         ),
@@ -43,7 +44,8 @@ def generate_launch_description():
                 'range_min': 0.1,
                 'range_max': 50.0,
                 'use_inf': False,
-                'inf_epsilon': 4.0
+                'inf_epsilon': 4.0,
+                'use_sim_time': True
             }],
             name='pointcloud_to_laserscan_for_amcl'
         ),

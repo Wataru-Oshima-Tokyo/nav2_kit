@@ -4,3 +4,11 @@
 [submodule "articubot_one"]
 	path = articubot_one
 	url = https://github.com/Wataru-Oshima-Tokyo/articubot_one.git
+[submodule "champ"]
+	path = champ
+	url = https://github.com/chvmp/champ
+	branch = ros2
+[submodule "champ_teleop"]
+	path = champ_teleop
+	url = https://github.com/chvmp/champ_teleop
+	branch = ros2
