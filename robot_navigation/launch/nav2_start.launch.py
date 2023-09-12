@@ -30,42 +30,29 @@ def launch_setup(context, *args, **kwargs):
     map_file = os.path.join(get_package_share_directory('sim_worlds2'),
         'maps',
          map_name)          
-    nav2_launch_file_dir = os.path.join(get_package_share_directory('nav2_bringup'), 'launch')
-    nav2_launch_path = PathJoinSubstitution(
-        [FindPackageShare('champ_navigation'), 'launch', 'navigate.launch.py']
-    )
-    if (robot_name is not "champ"):
-        return [
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource([nav2_launch_file_dir, '/bringup_launch.py']),
-                launch_arguments={
-                    'map': map_file,
-                    'use_sim_time': use_sim_time,
-                    'params_file': param_dir,
-                    }.items(),
-            ),
-        ]
-    else:
-        return [
-            IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(nav2_launch_path),
+    nav2_launch_file_dir = os.path.join(get_package_share_directory('nav2_bringup'), 'launch')    
+    return [
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([nav2_launch_file_dir, '/bringup_launch.py']),
             launch_arguments={
                 'map': map_file,
+                'use_sim_time': use_sim_time,
                 'params_file': param_dir,
-                'sim': use_sim_time,
-                'rviz': False
-            }.items()
-        )
-        ]
+                }.items(),
+        ),
+    ]
+
 
 
 def generate_launch_description():
     map_name_arg = DeclareLaunchArgument('map_name', default_value='akskR3.yaml', description='Name of the map')
-    robot_name_arg = DeclareLaunchArgument('robot_name', default_value='diffbot', description='Name of the map')
+    robot_name_arg = DeclareLaunchArgument('robot_name', default_value='diffbot', description='Name of the robot')
+    rviz_arg = DeclareLaunchArgument('rviz', default_value='false', description='whether to use rviz')
 
     return LaunchDescription([
         map_name_arg,
         robot_name_arg,
+        rviz_arg,
         OpaqueFunction(function=launch_setup)
 
     ])

@@ -11,7 +11,7 @@
     lidarFrame: "velodyne"
     baselinkFrame: "base_footprint"
     odometryFrame: "odom"
-    mapFrame: "map"
+    mapFrame: "world"
 
     # GPS Settings
     useImuHeadingInitialization: false           # if using GPS data, set to "true"

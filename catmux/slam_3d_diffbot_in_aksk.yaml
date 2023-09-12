@@ -1,0 +1,33 @@
+---
+common:
+  default_window: robot_navigation
+parameters:
+  robot_name: diffbot
+  map_name: aksk
+  world_name: map_aksk_with_obstacles
+  lidar_type: velodyne
+  map_filter_name: aksk_keepout
+  use_simulator: True
+  headless: True
+windows:
+  - name: lidar_util
+    commands:
+      - ros2 launch robot_navigation robot_lidar_util.launch.py lidar_type:=${lidar_type}
+  - name: aksk_wolrd
+    commands:
+      - ros2 launch sim_worlds2 launch_world.launch.py use_simulator:=${use_simulator} headless:=${headless} world_name:=${world_name}
+  - name: spawn_diffbot
+    commands:
+      - ros2 launch sim_worlds2 spawn_diffbot.launch.py spawn_x_val:=-20 
+  - name: map_server
+    commands:
+      - sleep 3
+      - ros2 launch robot_navigation robot_map_server.launch.py 
+  - name: lio_sam_node
+    commands:
+      - sleep 1
+      - ros2 launch lio_sam slam.launch.py
+  - name: lio_sam_nav
+    commands:
+      - sleep 5
+      - ros2 launch lio_sam lio_sam_nav.launch.py

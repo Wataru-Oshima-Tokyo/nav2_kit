@@ -10,6 +10,9 @@ parameters:
   use_simulator: True
   headless: False
 windows:
+  - name: lidar_util
+    commands:
+      - ros2 launch robot_navigation robot_lidar_util.launch.py lidar_type:=${lidar_type}
   - name: keepout_filter
     commands: 
       - ros2 launch robot_navigation robot_keepout_filter.launch.py map_filter_name:=${map_filter_name} 
@@ -21,5 +24,5 @@ windows:
       - ros2 launch sim_worlds2 launch_world.launch.py use_simulator:=${use_simulator} headless:=${headless} world_name:=${world_name}
   - name: spawn_champ
     commands:
-      - ros2 launch sim_worlds2 spawn_champ.launch.py 
+      - ros2 launch sim_worlds2 spawn_champ.launch.py spawn_x_val:=-20 
   
