@@ -30,7 +30,7 @@ def generate_launch_description():
                 'use_inf': False,
                 'inf_epsilon': 4.0
             }],
-            name='pointcloud_to_laserscan_for_move'
+            name='pointcloud_to_laserscan'
         ),
         Node(
             package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
