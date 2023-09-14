@@ -1,6 +1,6 @@
 ---
 common:
-  default_window: robot_navigation
+  default_window: goal_handler
 parameters:
   robot_name: diffbot
   map_name: aksk
@@ -31,3 +31,6 @@ windows:
     commands:
       - sleep 5
       - ros2 launch lio_sam lio_sam_nav.launch.py
+  - name: goal_handler
+    commands:
+      - ros2 launch goal_handler goal_handler.launch.py

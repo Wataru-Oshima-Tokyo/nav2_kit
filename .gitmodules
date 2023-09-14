@@ -12,3 +12,6 @@
 	path = champ_teleop
 	url = https://github.com/chvmp/champ_teleop
 	branch = ros2
+[submodule "techshare_ros_pkg2"]
+	path = techshare_ros_pkg2
+	url = https://github.com/TechShare-inc/techshare_ros_pkg2.git
