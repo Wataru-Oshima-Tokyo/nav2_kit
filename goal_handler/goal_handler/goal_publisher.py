@@ -36,16 +36,16 @@ class GoalActionServer(Node):
             #     f"Robot's pose in map: x = {transform.transform.translation.x}, "
             #     f"y = {transform.transform.translation.y}, "
             #     f"z = {transform.transform.translation.z}")
-            return transform.transform.translation.x, transform.transform.translation.y
+            return transform
         except tf2.LookupException as ex:
             self.get_logger().error(f"Exception caught: {ex}")
         except tf2.ExtrapolationException as ex:
             self.get_logger().error(f"Exception caught: {ex}")
-        return 0,0
+        return None
 
     def distance_to_next(self,target_pose):
-        current_robot_x, current_robot_y = self.get_pose()
-        return math.sqrt(math.pow(target_pose.pose.position.x - current_robot_x, 2) + math.pow(target_pose.pose.position.y - current_robot_y, 2))
+        current_position = self.get_pose()
+        return math.sqrt(math.pow(target_pose.pose.position.x - current_position.transform.translation.x, 2) + math.pow(target_pose.pose.position.y - current_position.transform.translation.y, 2))
 
     def goal_poses_execute_callback(self, goal_handle):
         self.nav = BasicNavigator()
@@ -54,6 +54,21 @@ class GoalActionServer(Node):
         self.get_logger().info('Executing goal...')
         feedback_msg = TriggerGoalSequence.Feedback()
         goal_poses = []
+        initial_position = None
+        while initial_position is None:
+            initial_position = self.get_pose()
+            time.sleep(0.1)
+        initial_pose = PoseStamped()
+        initial_pose.header.frame_id = 'map'
+        initial_pose.header.stamp = self.nav.get_clock().now().to_msg()
+        initial_pose.pose.position.x = initial_position.transform.translation.x
+        initial_pose.pose.position.y = initial_position.transform.translation.y
+        initial_pose.pose.position.z = initial_position.transform.translation.z
+
+        initial_pose.pose.orientation.x = initial_position.transform.rotation.x
+        initial_pose.pose.orientation.y = initial_position.transform.rotation.y
+        initial_pose.pose.orientation.z = initial_position.transform.rotation.z
+        initial_pose.pose.orientation.w = initial_position.transform.rotation.w
         for idx, goal_data in enumerate(self.goals_data['goals']):
             goal_pose = PoseStamped()
             goal_pose.header.frame_id = 'map'
@@ -78,25 +93,32 @@ class GoalActionServer(Node):
         prev_id = 0
         absolute_marker_id = 0
         check_goal_start = False
+        reached = False
         for j in range(3):
             if len(goal_poses) != 0 and  j>0:
+                self.get_logger().info('-------------------------------------------------')
+                self.get_logger().info('STILL has some goals so restart soon!')
+                self.get_logger().info('-------------------------------------------------')
                 goal_poses = goal_poses[absolute_marker_id+1:] 
                 self.nav.goThroughPoses(goal_poses)
                 nav_start = self.nav.get_clock().now()
-            check_goal_start = False
+                check_goal_start = False
+
             while not self.nav.isTaskComplete():
                 feedback = self.nav.getFeedback()
-                current_pose_id = len(goal_poses) - feedback.number_of_poses_remaining
-                if prev_id != current_pose_id:
+                current_target_pose_id = len(goal_poses) - feedback.number_of_poses_remaining
+                if prev_id != current_target_pose_id:
                     self.get_logger().info('goal id : ' + '{:d}'.format(absolute_marker_id) + ' is reached!')
-                    prev_id = current_pose_id
+                    prev_id = current_target_pose_id
                     nav_start = self.nav.get_clock().now()
+                    time_within_threshold = None 
                     absolute_marker_id +=1
+                    
                     
 
                 now = self.nav.get_clock().now()
                 time_difference_secs = int((now.nanoseconds - nav_start.nanoseconds) / 1e9)
-                dis_to_waypoint = self.distance_to_next(goal_poses[current_pose_id])
+                dis_to_waypoint = self.distance_to_next(goal_poses[current_target_pose_id])
                 if feedback and i % 5 == 0:
                     self.get_logger().info('-------------------------------------------------')
                     self.get_logger().info('Current pose id: ' + '{:d}'.format(
@@ -113,13 +135,6 @@ class GoalActionServer(Node):
                     feedback.navigation_time.sec) + ' secs')
                     self.get_logger().info('-------------------------------------------------')
 
-                    # self.get_pose()
-                    # self.get_logger().info(
-                    # f"target pose in map: x = {goal_poses[current_pose_id].pose.position.x}, "
-                    # f"y = {goal_poses[current_pose_id].pose.position.y}, "
-                    # f"z = {goal_poses[current_pose_id].pose.position.z}")
-
-
                         
                 """
                 here I would like to check if the remaining distance is less than one 
@@ -130,20 +145,20 @@ class GoalActionServer(Node):
                     check_goal_start = True
 
                 # Check the remaining distance
-                if check_goal_start:
+                if check_goal_start and prev_id == current_target_pose_id:
                     if time_within_threshold is None:  # If we haven't already started the timer
                         time_within_threshold = self.nav.get_clock().now()  # Start the timer
                     else:
-                        elapsed_time = int((self.nav.get_clock().now().nanoseconds - time_within_threshold.nanoseconds) / 1e9)
-                        if elapsed_time > 3:  # If more than 10 seconds have passed
-                            self.get_logger().info("Skipping current goal due to being within distance threshold for more than 10 seconds.")
+                        elapsed_time = int((nav_start.nanoseconds - time_within_threshold.nanoseconds) / 1e9)
+                        if elapsed_time > 5:  # If more than 10 seconds have passed
+                            self.get_logger().info("Skipping current goal due to being within distance threshold for more than 3 seconds.")
                             time_within_threshold = None  # Reset the timer
                             
                             # Skip to the next pose
-                            remaining_goals = goal_poses[current_pose_id+1:]  # Slice the list to start from the next pose
+                            remaining_goals = goal_poses[current_target_pose_id+1:]  # Slice the list to start from the next pose
                             if len(remaining_goals) > 0:  # If there are remaining goals
                                 goal_poses = copy.deepcopy(remaining_goals)
-                                self.nav.goThroughPoses(remaining_goals)  # Send the robot to the next set of poses
+                                self.nav.goThroughPoses(goal_poses)  # Send the robot to the next set of poses
                                 nav_start = self.nav.get_clock().now()
                                 prev_id = 0
                                 check_goal_start = False
@@ -153,6 +168,7 @@ class GoalActionServer(Node):
 
                 else:
                     time_within_threshold = None  # Reset the timer if robot moves outside the threshold
+                    check_goal_start = False
 
                 
                 # Some navigation timeout to demo cancellation
@@ -165,7 +181,14 @@ class GoalActionServer(Node):
             nav_result = self.nav.getResult()
             if nav_result == TaskResult.SUCCEEDED:
                 self.get_logger().info('Goal was succeeded!')
-                break
+                if not reached:
+                    reached = True
+                    self.nav.goToPose(initial_pose)
+                    nav_start = self.nav.get_clock().now()
+                    check_goal_start = False
+                    continue
+                else:
+                    break
                 # goal_handle.succeed()
             elif nav_result == TaskResult.CANCELED:
                 self.get_logger().info('Goal was canceled!')
