@@ -11,7 +11,7 @@ import math
 class MapOriginSetter(Node):
 
     def __init__(self):
-        super().__init__('map_origin_setter')
+        super().__init__('map_position_change_node')
         
         # Subscribe to initialpose
         self.subscriber = self.create_subscription(
@@ -23,7 +23,7 @@ class MapOriginSetter(Node):
         # Client for the map service
         self.declare_parameter('map_file_path', '/map.yaml')
         self.output_file = self.get_parameter('map_file_path').get_parameter_value().string_value      
-
+        self.nav = BasicNavigator()
 
     def euler_from_quaternion(self, quaternion):
         """
@@ -58,8 +58,8 @@ class MapOriginSetter(Node):
 
         # Extract the pose from the message and set it to the 'origin' field in the YAML data
         # The pose's position gives the x and y, and the orientation (quaternion) gives the z-angle
-        x = msg.pose.pose.position.x
-        y = msg.pose.pose.position.y
+        x = msg.pose.pose.position.x - 50
+        y = msg.pose.pose.position.y - 50 
         
         # Convert the quaternion orientation to Euler angles to get the yaw (z-angle)
         quaternion = (
@@ -68,6 +68,7 @@ class MapOriginSetter(Node):
             msg.pose.pose.orientation.z,
             msg.pose.pose.orientation.w
         )
+        
         _, _, yaw = self.euler_from_quaternion(quaternion)  # Assuming you have a function for this conversion
 
         # Update the origin in the map data
@@ -77,8 +78,9 @@ class MapOriginSetter(Node):
         with open(self.output_file, 'w') as file:
             yaml.safe_dump(self.map_yaml, file)
 
-        nav = BasicNavigator()
-        nav.changeMap(map_filepath=self.output_file)
+        
+        self.nav.changeMap(map_filepath=self.output_file)
+
 
 def main(args=None):
     rclpy.init(args=args)

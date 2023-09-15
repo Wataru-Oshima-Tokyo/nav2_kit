@@ -21,7 +21,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-             'load_map_node = map_handler.load_map:main',
+             'map_position_change_node = map_handler.load_map:main',
         ],
     },
 )

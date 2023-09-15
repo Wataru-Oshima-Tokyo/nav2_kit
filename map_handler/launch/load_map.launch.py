@@ -12,21 +12,49 @@ from launch.substitutions import LaunchConfiguration
 
 def launch_setup(context, *args, **kwargs):
     map_name = LaunchConfiguration('map_name').perform(context)
+    map_name = map_name + ".yaml"
     map_file_path = os.path.join(get_package_share_directory('sim_worlds2'),
         'maps',
          map_name)      
 
-    
+    map_config = os.path.join(get_package_share_directory(
+        'robot_navigation'), 'param', 'map_config.yaml')
     map_handler =  Node(
             package='map_handler',
-            executable='load_map_node',
-            name='load_map_node',
+            executable='map_position_change_node',
+            name='map_position_change_node',
             respawn=True,
             output='screen',
             parameters=[{"map_file_path": map_file_path}]
         )
+
+    map_server_node = Node(
+            package='nav2_map_server',
+            executable='map_server',
+            name='map_server',
+            respawn=True,
+            output='screen',
+            parameters=[map_config,
+                        {'topic_name': "map"},
+                        {'frame_id': "map"},
+                        {'yaml_filename': map_file_path}]
+        )
+
+    map_life_cycle_node =     Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='lifecycle_manager_map_server',
+            output='screen',
+            parameters=[{'use_sim_time': True},
+                        {'autostart': True},
+                        {'bond_timeout': 0.0},
+                        {'node_names': ['map_server']}]
+        )
+
     return [
-        map_handler
+        map_handler,
+        map_server_node,
+        map_life_cycle_node
     ]
 
 

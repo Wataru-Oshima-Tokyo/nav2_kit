@@ -26,6 +26,7 @@ class GoalSaverNode(Node):
         directory = os.path.dirname(self.output_file)
         if not os.path.exists(directory):
             os.makedirs(directory)
+        self.id = 0
 
     def goal_callback(self, msg: MarkerArray):
         # self.get_logger().info(f'Received goal: {msg.pose.position.x}, {msg.pose.position.y}')
@@ -54,6 +55,9 @@ class GoalSaverNode(Node):
             # You can store the poses in a list or any other data structure
             # Here I'm appending to a list as an example:
             self.goals.append({
+                'id': {
+                    'id': self.id
+                },
                 'position': {
                     'x': pose.position.x,
                     'y': pose.position.y,
@@ -71,6 +75,7 @@ class GoalSaverNode(Node):
             # Write the goals to a YAML file
             with open(self.output_file, 'w') as outfile:
                 yaml.dump({'goals': self.goals}, outfile)
+            self.id +=1
         else:
             self.get_logger().info("no coordinate available")
 
