@@ -78,101 +78,110 @@ class GoalActionServer(Node):
         prev_id = 0
         absolute_marker_id = 0
         check_goal_start = False
-
-        while not self.nav.isTaskComplete():
-            feedback = self.nav.getFeedback()
-            current_pose_id = len(goal_poses) - feedback.number_of_poses_remaining
-            if prev_id != current_pose_id:
-                self.get_logger().info('goal id : ' + '{:d}'.format(absolute_marker_id) + ' is reached!')
-                prev_id = current_pose_id
+        for j in range(3):
+            if len(goal_poses) != 0 and  j>0:
+                goal_poses = goal_poses[absolute_marker_id+1:] 
+                self.nav.goThroughPoses(goal_poses)
                 nav_start = self.nav.get_clock().now()
-                absolute_marker_id +=1
-                check_goal_start = False
+            check_goal_start = False
+            while not self.nav.isTaskComplete():
+                feedback = self.nav.getFeedback()
+                current_pose_id = len(goal_poses) - feedback.number_of_poses_remaining
+                if prev_id != current_pose_id:
+                    self.get_logger().info('goal id : ' + '{:d}'.format(absolute_marker_id) + ' is reached!')
+                    prev_id = current_pose_id
+                    nav_start = self.nav.get_clock().now()
+                    absolute_marker_id +=1
+                    
 
-            now = self.nav.get_clock().now()
-            time_difference_secs = int((now.nanoseconds - nav_start.nanoseconds) / 1e9)
-            dis_to_waypoint = self.distance_to_next(goal_poses[current_pose_id])
-            if feedback and i % 5 == 0:
-                self.get_logger().info('-------------------------------------------------')
-                self.get_logger().info('Current pose id: ' + '{:d}'.format(
-                absolute_marker_id))
-                self.get_logger().info('Distance remaining to the end goal: ' + '{:.2f}'.format(
-                feedback.distance_remaining) + ' meters.')
-                self.get_logger().info('Distance remaining to the next waypoint: ' + '{:.2f}'.format(
-                dis_to_waypoint) + ' meters.')
-                self.get_logger().info('Poses remaining: ' + '{:d}'.format(
-                feedback.number_of_poses_remaining) + ' poses')
-                self.get_logger().info('Time elapsed from the previous goal: ' + '{:d}'.format(
-                time_difference_secs) + ' secs')
-                self.get_logger().info('Time elapsed: ' + '{:d}'.format(
-                feedback.navigation_time.sec) + ' secs')
-                self.get_logger().info('-------------------------------------------------')
+                now = self.nav.get_clock().now()
+                time_difference_secs = int((now.nanoseconds - nav_start.nanoseconds) / 1e9)
+                dis_to_waypoint = self.distance_to_next(goal_poses[current_pose_id])
+                if feedback and i % 5 == 0:
+                    self.get_logger().info('-------------------------------------------------')
+                    self.get_logger().info('Current pose id: ' + '{:d}'.format(
+                    absolute_marker_id))
+                    self.get_logger().info('Distance remaining to the end goal: ' + '{:.2f}'.format(
+                    feedback.distance_remaining) + ' meters.')
+                    self.get_logger().info('Distance remaining to the next waypoint: ' + '{:.2f}'.format(
+                    dis_to_waypoint) + ' meters.')
+                    self.get_logger().info('Poses remaining: ' + '{:d}'.format(
+                    feedback.number_of_poses_remaining) + ' poses')
+                    self.get_logger().info('Time elapsed from the previous goal: ' + '{:d}'.format(
+                    time_difference_secs) + ' secs')
+                    self.get_logger().info('Time elapsed: ' + '{:d}'.format(
+                    feedback.navigation_time.sec) + ' secs')
+                    self.get_logger().info('-------------------------------------------------')
 
-                # self.get_pose()
-                # self.get_logger().info(
-                # f"target pose in map: x = {goal_poses[current_pose_id].pose.position.x}, "
-                # f"y = {goal_poses[current_pose_id].pose.position.y}, "
-                # f"z = {goal_poses[current_pose_id].pose.position.z}")
+                    # self.get_pose()
+                    # self.get_logger().info(
+                    # f"target pose in map: x = {goal_poses[current_pose_id].pose.position.x}, "
+                    # f"y = {goal_poses[current_pose_id].pose.position.y}, "
+                    # f"z = {goal_poses[current_pose_id].pose.position.z}")
 
 
-                     
-            """
-            here I would like to check if the remaining distance is less than one 
-            and it takes 10 seconds to reach the goal then erase(skip) the goal and go to the next pose.
-
-            """
-            if dis_to_waypoint < 2.0:  # If distance is less than one meter
-                check_goal_start = True
-
-            # Check the remaining distance
-            if check_goal_start:
-                if time_within_threshold is None:  # If we haven't already started the timer
-                    time_within_threshold = self.nav.get_clock().now()  # Start the timer
-                else:
-                    elapsed_time = int((self.nav.get_clock().now().nanoseconds - time_within_threshold.nanoseconds) / 1e9)
-                    if elapsed_time > 3:  # If more than 10 seconds have passed
-                        self.get_logger().info("Skipping current goal due to being within distance threshold for more than 10 seconds.")
-                        time_within_threshold = None  # Reset the timer
                         
-                        # Skip to the next pose
-                        remaining_goals = goal_poses[current_pose_id+1:]  # Slice the list to start from the next pose
-                        if len(remaining_goals) > 0:  # If there are remaining goals
-                            goal_poses = copy.deepcopy(remaining_goals)
-                            self.nav.goThroughPoses(remaining_goals)  # Send the robot to the next set of poses
-                            nav_start = self.nav.get_clock().now()
-                            prev_id = 0
-                            check_goal_start = False
-                        else:
-                            self.get_logger().info("No more goals left!")
-                            break  # Exit the loop if there are no more goals
+                """
+                here I would like to check if the remaining distance is less than one 
+                and it takes 10 seconds to reach the goal then erase(skip) the goal and go to the next pose.
 
-            else:
-                time_within_threshold = None  # Reset the timer if robot moves outside the threshold
+                """
+                if dis_to_waypoint < 2.0:  # If distance is less than one meter
+                    check_goal_start = True
 
-            
-            # Some navigation timeout to demo cancellation
-            if time_difference_secs > 300.0:
-                self.get_logger().error('MOVE BASE Goal canceled due to timeout')
-                self.nav.cancelTask()
+                # Check the remaining distance
+                if check_goal_start:
+                    if time_within_threshold is None:  # If we haven't already started the timer
+                        time_within_threshold = self.nav.get_clock().now()  # Start the timer
+                    else:
+                        elapsed_time = int((self.nav.get_clock().now().nanoseconds - time_within_threshold.nanoseconds) / 1e9)
+                        if elapsed_time > 3:  # If more than 10 seconds have passed
+                            self.get_logger().info("Skipping current goal due to being within distance threshold for more than 10 seconds.")
+                            time_within_threshold = None  # Reset the timer
+                            
+                            # Skip to the next pose
+                            remaining_goals = goal_poses[current_pose_id+1:]  # Slice the list to start from the next pose
+                            if len(remaining_goals) > 0:  # If there are remaining goals
+                                goal_poses = copy.deepcopy(remaining_goals)
+                                self.nav.goThroughPoses(remaining_goals)  # Send the robot to the next set of poses
+                                nav_start = self.nav.get_clock().now()
+                                prev_id = 0
+                                check_goal_start = False
+                            else:
+                                self.get_logger().info("No more goals left!")
+                                break  # Exit the loop if there are no more goals
+
+                else:
+                    time_within_threshold = None  # Reset the timer if robot moves outside the threshold
+
+                
+                # Some navigation timeout to demo cancellation
+                if time_difference_secs > 300.0:
+                    self.get_logger().error('MOVE BASE Goal canceled due to timeout')
+                    self.nav.cancelTask()
+                    break
+                time.sleep(1)
+                i+=1
+            nav_result = self.nav.getResult()
+            if nav_result == TaskResult.SUCCEEDED:
+                self.get_logger().info('Goal was succeeded!')
                 break
-            time.sleep(1)
-            i+=1
-        nav_result = self.nav.getResult()
-        if nav_result == TaskResult.SUCCEEDED:
-            self.get_logger().info('Goal was succeeded!')
-            # goal_handle.succeed()
-        elif nav_result == TaskResult.CANCELED:
-            self.get_logger().info('Goal was canceled!')
-            # goal_handle.canceled()
-        elif nav_result == TaskResult.FAILED:
-            self.get_logger().info('Goal failed!')
-            # goal_handle.abort()
-        else:
-            self.get_logger().info('Goal has an invalid return status!')    
-            # goal_handle.canceled()  
-            # Here, you would wait for feedback that the robot has reached its destination.
-            # For simplicity, this is omitted, but you'd likely set up a subscriber or some other mechanism.
-            
+                # goal_handle.succeed()
+            elif nav_result == TaskResult.CANCELED:
+                self.get_logger().info('Goal was canceled!')
+                break
+                # goal_handle.canceled()
+            elif nav_result == TaskResult.FAILED:
+                self.get_logger().info('Goal failed!')
+                continue
+                # goal_handle.abort()
+            else:
+                self.get_logger().info('Goal has an invalid return status!')  
+                break  
+                # goal_handle.canceled()  
+                # Here, you would wait for feedback that the robot has reached its destination.
+                # For simplicity, this is omitted, but you'd likely set up a subscriber or some other mechanism.
+                
 
             # Simulated wait for simplicity
         if nav_result == TaskResult.SUCCEEDED:
