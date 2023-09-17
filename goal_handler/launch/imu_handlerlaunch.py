@@ -15,26 +15,22 @@ def generate_launch_description():
     goal_save_path = home_directory + "/humble_ws/src/nav2_kit/goal_handler/goals/"
     cmd_vel_topic = "/diff_cont/cmd_vel_unstamped"
     
-    goal_handler =  Node(
+    imu_pose_node =  Node(
             package='goal_handler',
-            executable='goal_saver_node',
-            name='goal_saver_node',
+            executable='imu_pose_publisher',
+            name='imu_pose_publisher',
             respawn=True,
-            output='screen',
-            parameters=[{"output_file": goal_save_path}]
+            output='screen'
         )
-    goal_publisher =  Node(
-            package='goal_handler',
-            executable='goal_handler_node',
-            name='goal_handler_node',
-            respawn=True,
-            output='screen',
-            parameters=[{"goals_file": goal_save_path}, {"cmd_vel": cmd_vel_topic}]
-
+    map_to_imu_node =  Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='map_to_imu',
+            arguments=['0', '0', '0', '0', '0', '0', '1', 'map', 'imu']
         )
 
 
     return LaunchDescription([
-        goal_handler,
-        goal_publisher
+        imu_pose_node,
+        map_to_imu_node
     ])

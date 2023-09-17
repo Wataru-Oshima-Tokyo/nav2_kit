@@ -22,7 +22,10 @@ setup(
     entry_points={
         'console_scripts': [
             'goal_saver_node = goal_handler.goal_saver:main',
-            'goal_handler_node = goal_handler.goal_publisher:main'
+            'goal_handler_node = goal_handler.goal_publisher:main',
+            'imu_pose_publisher = goal_handler.imu_pose_publisher:main',
+            'demo_recoveries = goal_handler.demo_recoveries:main',
+            'logging_test = goal_handler.logging_test:main'
         ],
     },
 )

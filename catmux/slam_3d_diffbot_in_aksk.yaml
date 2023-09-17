@@ -4,7 +4,7 @@ common:
 parameters:
   robot_name: diffbot
   map_name: white
-  world_name: map_aksk_with_obstacles
+  world_name: map_aksk_with_obstacles_lite2
   lidar_type: velodyne
   map_filter_name: aksk_keepout
   use_simulator: True

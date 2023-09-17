@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
-from rclpy.action import ActionServer
-from geometry_msgs.msg import PoseStamped
+from rclpy.action import ActionServer, CancelResponse, GoalResponse
+from geometry_msgs.msg import PoseStamped, Twist
 from rclpy.duration import Duration 
 from techshare_ros_pkg2.action import TriggerGoalSequence
 from nav2_simple_commander.robot_navigator import BasicNavigator,TaskResult
@@ -12,30 +12,224 @@ from tf2_ros import TransformListener, Buffer
 from rclpy.clock import ROSClock
 import math
 import copy
+import os
+import datetime
+import random
 
 class GoalActionServer(Node):
 
     def __init__(self):
         super().__init__('nav_goal_handler')
         self.declare_parameter('goals_file', '/')
+        self.declare_parameter('cmd_vel', 'cmd_vel')
         self.output_file = self.get_parameter('goals_file').get_parameter_value().string_value + "goals.yaml"
+        # Get the current date and time and format it as a string
+        current_datetime = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        base_filename = 'current_pose_{}.yaml'.format(current_datetime)
+
+        # Append it to your base file path
+        self.result_file = os.path.join(
+            self.get_parameter('goals_file').get_parameter_value().string_value,
+            base_filename
+        )
         # Load the goals from the YAML file
         self.tf_buffer = Buffer(Duration(seconds=10))
         self.tf_listener = TransformListener(self.tf_buffer, self)  
+        self.current_speed = 0.0
         self.through_goal_poses_server = ActionServer(
             self,
             TriggerGoalSequence,
             'go_through_poses_sender',
-            self.goal_poses_execute_callback)
+            execute_callback = self.goal_poses_execute_callback,
+            goal_callback= self.goal_callback,
+            cancel_callback= self.cancel_callback
+        )
+        self.cmd_vel_sub = self.create_subscription(
+            Twist,
+            self.get_parameter('cmd_vel').get_parameter_value().string_value,
+            self.cmd_vel_listener_callback,
+            10)
+        self.cmd_vel_sub  # prevent unused variable warning
+
+    def cmd_vel_listener_callback(self, msg):
+        self.current_speed = msg.linear.x
+
+    def doSpin(self, navigator, spin_dist):
+        navigator.cancelTask()
+        pose = None
+        while pose is None:
+            pose = self.get_pose()
+            time.sleep(0.1)
+        # Extract the current orientation in quaternion format
+        orientation_q = pose.transform.rotation
+
+        # Convert the quaternion to Euler angles
+        (roll, pitch, yaw) = self.euler_from_quaternion(orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w)
+
+        # Add the given rotation angle to the yaw
+        yaw += spin_dist
+
+        # Convert the updated Euler angles back to a quaternion
+        updated_orientation_q = self.quaternion_from_euler(roll, pitch, yaw)
+
+        # Set the updated orientation to the pose
+        pose.transform.rotation.x = updated_orientation_q[0]
+        pose.transform.rotation.y = updated_orientation_q[1]
+        pose.transform.rotation.z = updated_orientation_q[2]
+        pose.transform.rotation.w = updated_orientation_q[3]
+
+
+        spin_pose = PoseStamped()
+        spin_pose.header.frame_id = 'odom'
+        spin_pose.header.stamp = self.nav.get_clock().now().to_msg()
+        spin_pose.pose.position.x = pose.transform.translation.x
+        spin_pose.pose.position.y = pose.transform.translation.y
+        spin_pose.pose.position.z = pose.transform.translation.z
+
+        spin_pose.pose.orientation.x = pose.transform.rotation.x
+        spin_pose.pose.orientation.y = pose.transform.rotation.y
+        spin_pose.pose.orientation.z = pose.transform.rotation.z
+        spin_pose.pose.orientation.w = pose.transform.rotation.w
+
+
+        navigator.goToPose(spin_pose)
+        x = 0
+        while not navigator.isTaskComplete():
+            x += 1
+            feedback = self.nav.getFeedback()
+            if feedback and x % 2 == 0:
+                self.print_in_blue(f'Spin angle traveled')
+        self.print_in_pink('Spin is finished')
+
+    def transform_to_dict(self, transform):
+        return {
+            'position': {
+                'x': transform.transform.translation.x,
+                'y': transform.transform.translation.y,
+                'z': transform.transform.translation.z
+            },
+            'orientation': {
+                'x': transform.transform.rotation.x,
+                'y': transform.transform.rotation.y,
+                'z': transform.transform.rotation.z,
+                'w': transform.transform.rotation.w
+            }
+        }
+    def writeTheResult(self, pose, pose_str):
+        pose_dict = self.transform_to_dict(pose)
+        # If the result file exists, load its content
+        if os.path.exists(self.result_file):
+            with open(self.result_file, 'r') as file:
+                data = yaml.safe_load(file)
+                if data is None:
+                    data = {}
+        else:
+            data = {}
+
+        # Check if 'pose' key exists and if not, initialize it as a list
+        if pose_str not in data:
+            data[pose_str] = []
+
+        # Ensure pose_str is a list and then append the new pose data
+        if isinstance(data[pose_str], list):
+            data[pose_str].append(pose_dict)
+        elif pose_str in data and not isinstance(data[pose_str], list):
+            self.print_in_red(f"Data Type of current_pose: {type(data[pose_str])}")
+            self.print_in_red("Removing invalid current_pose from data.")
+            del data[pose_str]
+            return                  
+        else:
+            # Handle unexpected cases where pose_str is not a list
+            self.print_in_yellow("Error: Unexpected data format in YAML file.")
+            return
+
+        # Write the updated dictionary back to the YAML file
+        with open(self.result_file, 'w') as file:
+            yaml.safe_dump(data, file)
+        self.print_in_brown(f"Write the {pose_str}")
+
+
+    def euler_from_quaternion(self, x, y, z, w):
+        """
+        Convert a quaternion into euler angles (roll, pitch, yaw)
+        roll is rotation around x in radians (counterclockwise)
+        pitch is rotation around y in radians (counterclockwise)
+        yaw is rotation around z in radians (counterclockwise)
+        """
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + y * y)
+        roll_x = math.atan2(t0, t1)
         
+        t2 = +2.0 * (w * y - z * x)
+        t2 = +1.0 if t2 > +1.0 else t2
+        t2 = -1.0 if t2 < -1.0 else t2
+        pitch_y = math.asin(t2)
+        
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (y * y + z * z)
+        yaw_z = math.atan2(t3, t4)
+        
+        return roll_x, pitch_y, yaw_z  # in radians
+
+    def quaternion_from_euler(self, roll, pitch, yaw):
+        """
+        Convert euler angles (roll, pitch, yaw) to quaternion (x, y, z, w)
+        """
+        cy = math.cos(yaw * 0.5)
+        sy = math.sin(yaw * 0.5)
+        cp = math.cos(pitch * 0.5)
+        sp = math.sin(pitch * 0.5)
+        cr = math.cos(roll * 0.5)
+        sr = math.sin(roll * 0.5)
+
+        w = cy * cp * cr + sy * sp * sr
+        x = cy * cp * sr - sy * sp * cr
+        y = sy * cp * sr + cy * sp * cr
+        z = sy * cp * cr - cy * sp * sr
+
+        return [x, y, z, w]
+
+
+    
+
+    def print_in_blue(self, msg):
+        blue_start = "\033[94m"
+        color_end = "\033[0m"
+        self.get_logger().info(f"{blue_start}{msg}{color_end}")
+
+    def print_in_green(self, msg):
+        green_start = "\033[92m"
+        color_end = "\033[0m"
+        self.get_logger().info(f"{green_start}{msg}{color_end}")
+
+    def print_in_brown(self, msg):
+        brown_start = "\033[38;5;130m"  # Brown color in 256-color mode.
+        color_end = "\033[0m"
+        self.get_logger().info(f"{brown_start}{msg}{color_end}")
+
+    def print_in_purple(self, msg):
+        purple_start = "\033[95m"  # Light magenta, which might look like purple in most terminals.
+        color_end = "\033[0m"
+        self.get_logger().info(f"{purple_start}{msg}{color_end}")
+
+    def print_in_pink(self, msg):
+        pink_start = "\033[38;5;213m"  # Alternative pink color in 256-color mode.
+        color_end = "\033[0m"
+        self.get_logger().info(f"{pink_start}{msg}{color_end}")
+
+    def print_in_red(self, msg):
+        red_start = "\033[31m"  # Red color.
+        color_end = "\033[0m"
+        self.get_logger().info(f"{red_start}{msg}{color_end}")
+
+    def print_in_yellow(self, msg):
+        yellow_start = "\033[33m"  # Yellow color.
+        color_end = "\033[0m"
+        self.get_logger().info(f"{yellow_start}{msg}{color_end}")
 
     def get_pose(self):
         try:
             transform: TransformStamped = self.tf_buffer.lookup_transform("world", "velodyne", rclpy.time.Time())
-            # self.get_logger().info(
-            #     f"Robot's pose in map: x = {transform.transform.translation.x}, "
-            #     f"y = {transform.transform.translation.y}, "
-            #     f"z = {transform.transform.translation.z}")
             return transform
         except tf2.LookupException as ex:
             self.get_logger().error(f"Exception caught: {ex}")
@@ -47,7 +241,18 @@ class GoalActionServer(Node):
         current_position = self.get_pose()
         return math.sqrt(math.pow(target_pose.pose.position.x - current_position.transform.translation.x, 2) + math.pow(target_pose.pose.position.y - current_position.transform.translation.y, 2))
 
-    def goal_poses_execute_callback(self, goal_handle):
+    def goal_callback(self, goal_request):
+        """Accept or reject a client request to begin an action."""
+        # This server allows multiple goals in parallel
+        self.print_in_green('Received goal request')
+        return GoalResponse.ACCEPT
+
+    def cancel_callback(self, goal_handle):
+        """Accept or reject a client request to cancel an action."""
+        self.print_in_red('Received cancel request')
+        return CancelResponse.ACCEPT
+
+    async def goal_poses_execute_callback(self, goal_handle):
         self.nav = BasicNavigator()
         with open(self.output_file, 'r') as file:
             self.goals_data = yaml.safe_load(file)
@@ -55,6 +260,8 @@ class GoalActionServer(Node):
         feedback_msg = TriggerGoalSequence.Feedback()
         goal_poses = []
         initial_position = None
+        loop = goal_handle.request.loop
+        self.print_in_blue("The loop is " + '{:d}'.format(loop))
         while initial_position is None:
             initial_position = self.get_pose()
             time.sleep(0.1)
@@ -69,153 +276,203 @@ class GoalActionServer(Node):
         initial_pose.pose.orientation.y = initial_position.transform.rotation.y
         initial_pose.pose.orientation.z = initial_position.transform.rotation.z
         initial_pose.pose.orientation.w = initial_position.transform.rotation.w
-        for idx, goal_data in enumerate(self.goals_data['goals']):
-            goal_pose = PoseStamped()
-            goal_pose.header.frame_id = 'map'
-            goal_pose.header.stamp = self.nav.get_clock().now().to_msg()
-            goal_pose.pose.position.x = goal_data['position']['x']
-            goal_pose.pose.position.y = goal_data['position']['y']
-            goal_pose.pose.position.z = goal_data['position']['z']
+        self.writeTheResult(initial_position, 'initial_pose')
+        fail_counter = 0
+        while True:
 
-            goal_pose.pose.orientation.x = goal_data['orientation']['x']
-            goal_pose.pose.orientation.y = goal_data['orientation']['y']
-            goal_pose.pose.orientation.z = goal_data['orientation']['z']
-            goal_pose.pose.orientation.w = goal_data['orientation']['w']
-            goal_poses.append(goal_pose)
-            # self.publisher_.publish(goal_pose)
+            for idx, goal_data in enumerate(self.goals_data['goals']):
+                goal_pose = PoseStamped()
+                goal_pose.header.frame_id = 'map'
+                goal_pose.header.stamp = self.nav.get_clock().now().to_msg()
+                goal_pose.pose.position.x = goal_data['position']['x']
+                goal_pose.pose.position.y = goal_data['position']['y']
+                goal_pose.pose.position.z = goal_data['position']['z']
 
-        
-        # nav_result = self.nav.waitUntilNav2Active(localizer="bt_navigator")
-        self.nav.goThroughPoses(goal_poses)
-        i = 0
-        nav_start = self.nav.get_clock().now()
-        nav_result = True
-        prev_id = 0
-        absolute_marker_id = 0
-        check_goal_start = False
-        reached = False
-        for j in range(3):
-            if len(goal_poses) != 0 and  j>0:
-                self.get_logger().info('-------------------------------------------------')
-                self.get_logger().info('STILL has some goals so restart soon!')
-                self.get_logger().info('-------------------------------------------------')
-                goal_poses = goal_poses[absolute_marker_id+1:] 
-                self.nav.goThroughPoses(goal_poses)
-                nav_start = self.nav.get_clock().now()
-                check_goal_start = False
+                goal_pose.pose.orientation.x = goal_data['orientation']['x']
+                goal_pose.pose.orientation.y = goal_data['orientation']['y']
+                goal_pose.pose.orientation.z = goal_data['orientation']['z']
+                goal_pose.pose.orientation.w = goal_data['orientation']['w']
+                goal_poses.append(goal_pose)
+                # self.publisher_.publish(goal_pose)
 
-            while not self.nav.isTaskComplete():
-                feedback = self.nav.getFeedback()
-                current_target_pose_id = len(goal_poses) - feedback.number_of_poses_remaining
-                if prev_id != current_target_pose_id:
-                    self.get_logger().info('goal id : ' + '{:d}'.format(absolute_marker_id) + ' is reached!')
-                    prev_id = current_target_pose_id
+            
+            # nav_result = self.nav.waitUntilNav2Active(localizer="bt_navigator")
+            self.nav.goThroughPoses(goal_poses)
+            i = 0
+            nav_start = self.nav.get_clock().now()
+            absolute_nav_time = self.nav.get_clock().now()
+            nav_result = True
+            current_pose_id = 0
+            absolute_marker_id = 0
+            check_goal_start = False
+            reached = False
+            time_within_threshold = None 
+            previous_speed = 0
+            self.nav.clearLocalCostmap()
+            for j in range(3):
+                if len(goal_poses) != 0 and  j >0 and not reached:
+                    self.print_in_blue('-------------------------------------------------')
+                    self.print_in_yellow('STILL has some goals so restart soon!')
+                    self.print_in_blue('-------------------------------------------------')
+                    remaining_goals = goal_poses[absolute_marker_id:] 
+                    self.nav.goThroughPoses(remaining_goals)
                     nav_start = self.nav.get_clock().now()
-                    time_within_threshold = None 
-                    absolute_marker_id +=1
-                    
-                    
-
-                now = self.nav.get_clock().now()
-                time_difference_secs = int((now.nanoseconds - nav_start.nanoseconds) / 1e9)
-                dis_to_waypoint = self.distance_to_next(goal_poses[current_target_pose_id])
-                if feedback and i % 5 == 0:
-                    self.get_logger().info('-------------------------------------------------')
-                    self.get_logger().info('Current pose id: ' + '{:d}'.format(
-                    absolute_marker_id))
-                    self.get_logger().info('Distance remaining to the end goal: ' + '{:.2f}'.format(
-                    feedback.distance_remaining) + ' meters.')
-                    self.get_logger().info('Distance remaining to the next waypoint: ' + '{:.2f}'.format(
-                    dis_to_waypoint) + ' meters.')
-                    self.get_logger().info('Poses remaining: ' + '{:d}'.format(
-                    feedback.number_of_poses_remaining) + ' poses')
-                    self.get_logger().info('Time elapsed from the previous goal: ' + '{:d}'.format(
-                    time_difference_secs) + ' secs')
-                    self.get_logger().info('Time elapsed: ' + '{:d}'.format(
-                    feedback.navigation_time.sec) + ' secs')
-                    self.get_logger().info('-------------------------------------------------')
-
-                        
-                """
-                here I would like to check if the remaining distance is less than one 
-                and it takes 10 seconds to reach the goal then erase(skip) the goal and go to the next pose.
-
-                """
-                if dis_to_waypoint < 2.0:  # If distance is less than one meter
-                    check_goal_start = True
-
-                # Check the remaining distance
-                if check_goal_start and prev_id == current_target_pose_id:
-                    if time_within_threshold is None:  # If we haven't already started the timer
-                        time_within_threshold = self.nav.get_clock().now()  # Start the timer
-                    else:
-                        elapsed_time = int((nav_start.nanoseconds - time_within_threshold.nanoseconds) / 1e9)
-                        if elapsed_time > 5:  # If more than 10 seconds have passed
-                            self.get_logger().info("Skipping current goal due to being within distance threshold for more than 3 seconds.")
-                            time_within_threshold = None  # Reset the timer
-                            
-                            # Skip to the next pose
-                            remaining_goals = goal_poses[current_target_pose_id+1:]  # Slice the list to start from the next pose
-                            if len(remaining_goals) > 0:  # If there are remaining goals
-                                goal_poses = copy.deepcopy(remaining_goals)
-                                self.nav.goThroughPoses(goal_poses)  # Send the robot to the next set of poses
-                                nav_start = self.nav.get_clock().now()
-                                prev_id = 0
-                                check_goal_start = False
-                            else:
-                                self.get_logger().info("No more goals left!")
-                                break  # Exit the loop if there are no more goals
-
-                else:
-                    time_within_threshold = None  # Reset the timer if robot moves outside the threshold
                     check_goal_start = False
+                    fail_counter +=1
 
-                
-                # Some navigation timeout to demo cancellation
-                if time_difference_secs > 300.0:
-                    self.get_logger().error('MOVE BASE Goal canceled due to timeout')
-                    self.nav.cancelTask()
-                    break
-                time.sleep(1)
-                i+=1
-            nav_result = self.nav.getResult()
-            if nav_result == TaskResult.SUCCEEDED:
-                self.get_logger().info('Goal was succeeded!')
-                if not reached:
-                    reached = True
+                while not self.nav.isTaskComplete():
+                    feedback = self.nav.getFeedback()
+                    target_pose_id = len(goal_poses) - feedback.number_of_poses_remaining
+
+                    if current_pose_id != target_pose_id and not reached:
+                        self.print_in_pink('goal id : ' + '{:d}'.format(absolute_marker_id) + ' is reached!')
+                        current_pose_id = target_pose_id
+                        nav_start = self.nav.get_clock().now()
+                        time_within_threshold = None 
+                        absolute_marker_id +=1
+                    
+                    if previous_speed != self.current_speed:
+                        if self.current_speed == - 0.2:
+                            
+                            self.print_in_yellow('Object detection mode: Reset costmap')
+                            self.nav.clearLocalCostmap()
+                            multiplier = -1 if random.choice([True, False]) else 1
+                            spin_dist = 1.57 * multiplier
+                            self.nav.cancelTask()
+                            # while not self.nav.isTaskComplete():
+                            #     time.sleep(0.1)
+                            # self.doSpin(navigator=self.nav, spin_dist=spin_dist)
+
+                            remaining_goals = goal_poses[absolute_marker_id:] 
+                            self.nav.goThroughPoses(remaining_goals)
+                            
+                    previous_speed = self.current_speed 
+
+                    now = self.nav.get_clock().now()
+                    time_difference_secs = int((now.nanoseconds - nav_start.nanoseconds) / 1e9)
+                    abs_nav_time = int((now.nanoseconds - absolute_nav_time.nanoseconds) / 1e9)
+                    dis_to_waypoint = self.distance_to_next(goal_poses[target_pose_id])
+                    if feedback and i % 5 == 0:
+                        self.print_in_blue('-------------------------------------------------')
+                        self.print_in_green('Target pose id: ' + '{:d}'.format(
+                        absolute_marker_id))
+                        self.get_logger().info('Distance remaining to the end goal: ' + '{:.2f}'.format(
+                        feedback.distance_remaining) + ' meters.')
+                        self.print_in_purple('Distance remaining to the next waypoint: ' + '{:.2f}'.format(
+                        dis_to_waypoint) + ' meters.')
+                        self.get_logger().info('Poses remaining: ' + '{:d}'.format(
+                        feedback.number_of_poses_remaining) + ' poses')
+                        self.get_logger().info('Time elapsed from the previous goal: ' + '{:d}'.format(
+                        time_difference_secs) + ' secs')
+                        self.get_logger().info('Time elapsed: ' + '{:d}'.format(
+                        abs_nav_time) + ' secs')
+                        self.print_in_blue('-------------------------------------------------')
+
+                            
+                    """
+                    here I would like to check if the remaining distance is less than one 
+                    and it takes 10 seconds to reach the goal then erase(skip) the goal and go to the next pose.
+
+                    """
+                    if dis_to_waypoint < 2:  # If distance is less than one meter
+                        check_goal_start = True
+                    elif dis_to_waypoint > 5:
+                        check_goal_start = False
+                    
+                    # Check the remaining distance
+                    if check_goal_start and not reached:
+                        if time_within_threshold is None:  # If we haven't already started the timer
+                            time_within_threshold = self.nav.get_clock().now()  # Start the timer
+                            self.print_in_brown("goal reach time now starts ticking!!")
+                        else:
+                            elapsed_time = int((now.nanoseconds - time_within_threshold.nanoseconds) / 1e9)
+                            if elapsed_time > 3:  # If more than 10 seconds have passed
+                                self.print_in_yellow("Skipping current goal due to being within distance threshold for more than 3 seconds.")
+                                time_within_threshold = None  # Reset the timer
+                                
+                                # Skip to the next pose
+                                remaining_goals = goal_poses[target_pose_id+1:]  # Slice the list to start from the next pose
+                                if len(remaining_goals) > 0:  # If there are remaining goals
+                                    self.nav.goThroughPoses(remaining_goals)  # Send the robot to the next set of poses
+                                    nav_start = self.nav.get_clock().now()
+                                    current_pose_id = 0
+                                    check_goal_start = False
+                                    # absolute_marker_id +=1
+                                else:
+                                    self.print_in_blue("No more goals left!")
+                                    reached = True
+                                    goal_poses =[]
+                                    self.nav.cancelTask()
+                                    
+
+
+                    else:
+                        time_within_threshold = None  # Reset the timer if robot moves outside the threshold
+
+                    
+                    # Some navigation timeout to demo cancellation
+                    if time_difference_secs > 300.0:
+                        self.print_in_red('MOVE BASE Goal canceled due to timeout')
+                        self.nav.cancelTask()
+                        break
+
+                    time.sleep(1)
+                    i+=1
+
+                nav_result = self.nav.getResult()
+                if reached or nav_result == TaskResult.SUCCEEDED:
+                    self.print_in_pink('Now going back to the initial position')
+                    initial_pose.header.stamp = self.nav.get_clock().now().to_msg()
                     self.nav.goToPose(initial_pose)
                     nav_start = self.nav.get_clock().now()
                     check_goal_start = False
-                    continue
-                else:
-                    break
-                # goal_handle.succeed()
-            elif nav_result == TaskResult.CANCELED:
-                self.get_logger().info('Goal was canceled!')
-                break
-                # goal_handle.canceled()
-            elif nav_result == TaskResult.FAILED:
-                self.get_logger().info('Goal failed!')
-                continue
-                # goal_handle.abort()
-            else:
-                self.get_logger().info('Goal has an invalid return status!')  
-                break  
-                # goal_handle.canceled()  
-                # Here, you would wait for feedback that the robot has reached its destination.
-                # For simplicity, this is omitted, but you'd likely set up a subscriber or some other mechanism.
-                
 
-            # Simulated wait for simplicity
+                    while not self.nav.isTaskComplete():
+                        time.sleep(1)
+
+
+                nav_result = self.nav.getResult()
+                if nav_result == TaskResult.SUCCEEDED:
+                    self.print_in_green('Goal was succeeded!')
+                    # TODO: here I would like to get the the current pose and write it to a yaml file
+                    # Fetch the current pose
+                    current_pose = None
+                    while current_pose is None:
+                        current_pose = self.get_pose()
+                        time.sleep(0.1)
+                    if current_pose:
+                        self.writeTheResult(current_pose, 'current_pose')
+                    break
+                elif nav_result == TaskResult.CANCELED:
+                    self.print_in_yellow('Goal was canceled!')
+                    break
+                    # goal_handle.canceled()
+                elif nav_result == TaskResult.FAILED:
+                    self.print_in_red('Goal failed!')
+                    continue
+                    # goal_handle.abort()
+                else:
+                    self.print_in_red('Goal has an invalid return status!')  
+                    loop = False
+                    break  
+                    # goal_handle.canceled()  
+                    # Here, you would wait for feedback that the robot has reached its destination.
+                    # For simplicity, this is omitted, but you'd likely set up a subscriber or some other mechanism.
+            if loop == False or fail_counter > 100:
+                break     
+
+        # Simulated wait for simplicity
         if nav_result == TaskResult.SUCCEEDED:
             result = TriggerGoalSequence.Result()
             result.success = True
             result.message = "All goals have been published!"
+            goal_handle.succeed()
             return result
         else:
             result = TriggerGoalSequence.Result()
             result.success = False
             result.message = "Failed to reacch the points...."
+            goal_handle.abort()
             return result
 
 

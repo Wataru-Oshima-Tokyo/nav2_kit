@@ -29,19 +29,13 @@ def generate_launch_description():
             share_dir, 'config', 'world_map.yaml'),
         description='FPath to the ROS2 parameters file to use.')
     
-    navigation_launch_path = PathJoinSubstitution(
-        [FindPackageShare('nav2_bringup'), 'launch', 'navigation_launch.py']
-    )
 
-    # map_server_node = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource(
-    #         os.path.join(
-    #             get_package_share_directory("robot_navigation"),
-    #             "launch",
-    #             "robot_map_server.launch.py",
-    #         )
-    #     )
-    # )
+    velodyne_odom_to_base_link_node =  Node(
+            package='fake_odom',
+            executable='fake_odom_broadcaster',
+            name='fake_odom_to_base_link',
+        )
+
 
     map_to_odom_node =  Node(
             package='tf2_ros',
@@ -81,18 +75,19 @@ def generate_launch_description():
             ),
         ]
     )
-    navigation_node =  IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(navigation_launch_path),
-            launch_arguments={
-                'use_sim_time': LaunchConfiguration("sim"),
-                'params_file': navigation_param,
-            }.items()
-        )
+
 
     delayed_lio_sam_server =   RegisterEventHandler(
         event_handler=OnProcessStart(
             target_action=map_to_odom_node,
             on_start=[lio_sam_nodes],
+        )
+    )
+
+    delayed_fake_odom =   RegisterEventHandler(
+        event_handler=OnProcessStart(
+            target_action=map_to_odom_node,
+            on_start=[velodyne_odom_to_base_link_node],
         )
     )
 
@@ -102,6 +97,7 @@ def generate_launch_description():
         sim_declare,
         map_to_odom_node,
         delayed_lio_sam_server,
+        delayed_fake_odom,
         # odom_to_base_link,
         # delayed_lio_sam_server,
         Node(

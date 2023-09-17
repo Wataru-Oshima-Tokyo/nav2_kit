@@ -37,6 +37,7 @@ def generate_launch_description():
             launch_arguments={
                 'use_sim_time': LaunchConfiguration("sim"),
                 'params_file': navigation_param,
+                'respawn': 'true'
             }.items()
         )
 
