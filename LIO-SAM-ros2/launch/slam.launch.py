@@ -11,20 +11,10 @@ from launch.event_handlers import OnProcessStart, OnProcessExit
 def generate_launch_description():
 
     share_dir = get_package_share_directory('lio_sam')
-    parameter_file = LaunchConfiguration('parameter_file')
-    rviz_config_file = os.path.join(share_dir, 'config', 'rviz2.rviz')
-    sim = LaunchConfiguration('sim')
-    navigation_param = os.path.join(get_package_share_directory(
-        'robot_navigation'), 'param', "slam.yaml")
-
-    sim_declare =  DeclareLaunchArgument(
-            name='sim', 
-            default_value='true',
-            description='Enable use_sime_time to true'
-    )
+    lio_parameter_file = LaunchConfiguration('lio_parameter_file')
 
     params_declare = DeclareLaunchArgument(
-        'parameter_file',
+        'lio_parameter_file',
         default_value=os.path.join(
             share_dir, 'config', 'world_map.yaml'),
         description='FPath to the ROS2 parameters file to use.')
@@ -43,34 +33,35 @@ def generate_launch_description():
             name='map_to_odom',
             arguments=['0', '0', '0', '0', '0', '0', '1', 'map', 'odom']
         )
+
     lio_sam_nodes = GroupAction(
         actions=[
             Node(
                 package='lio_sam',
                 executable='lio_sam_imuPreintegration',
                 name='lio_sam_imuPreintegration',
-                parameters=[parameter_file],
+                parameters=[lio_parameter_file],
                 output='screen'
             ),
             Node(
                 package='lio_sam',
                 executable='lio_sam_imageProjection',
                 name='lio_sam_imageProjection',
-                parameters=[parameter_file],
+                parameters=[lio_parameter_file],
                 output='screen'
             ),
             Node(
                 package='lio_sam',
                 executable='lio_sam_featureExtraction',
                 name='lio_sam_featureExtraction',
-                parameters=[parameter_file],
+                parameters=[lio_parameter_file],
                 output='screen'
             ),
             Node(
                 package='lio_sam',
                 executable='lio_sam_mapOptimization',
                 name='lio_sam_mapOptimization',
-                parameters=[parameter_file],
+                parameters=[lio_parameter_file],
                 output='screen'
             ),
         ]
@@ -94,26 +85,13 @@ def generate_launch_description():
 
     return LaunchDescription([
         params_declare,
-        sim_declare,
         map_to_odom_node,
         delayed_lio_sam_server,
         delayed_fake_odom,
-        # odom_to_base_link,
-        # delayed_lio_sam_server,
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
             name='world_to_map',
             arguments=['0', '0', '0', '0', '0', '0', '1', 'world', 'map']
         ),
-
-
-
-        # Node(
-        #     package='rviz2',
-        #     executable='rviz2',
-        #     name='rviz2',
-        #     arguments=['-d', rviz_config_file],
-        #     output='screen'
-        # ),
     ])

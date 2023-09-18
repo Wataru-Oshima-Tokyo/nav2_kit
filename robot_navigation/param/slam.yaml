@@ -122,12 +122,14 @@ local_costmap:
     ros__parameters:
       update_frequency: 5.0 # 5.0
       publish_frequency: 2.0 #2.0
-      global_frame: velodyne
+      global_frame: odom
       robot_base_frame: velodyne
       use_sim_time: true
       rolling_window: true
-      width: 8
-      height: 8
+      width: 9
+      height: 9
+      # origin_x: -10.0
+      # origin_y: -3.0
       resolution: 0.05
       robot_radius: 0.22
       plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]
@@ -148,7 +150,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.8
+        inflation_radius: 1.0
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -160,7 +162,7 @@ local_costmap:
         mark_threshold: 0
         observation_sources: scan
         scan:
-          topic: /scan_for_move
+          topic: /scan
           max_obstacle_height: 2.0
           clearing: True
           marking: True
@@ -188,7 +190,7 @@ global_costmap:
         enabled: True
         observation_sources: scan
         scan:
-          topic: /scan_for_move
+          topic: /scan
           max_obstacle_height: 3.0
           clearing: True
           marking: True
@@ -204,7 +206,8 @@ global_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
         inflation_radius: 0.8
-      always_send_full_costmap: false
+      always_send_full_costmap: true
+
   global_costmap_client:
     ros__parameters:
       use_sim_time: True
@@ -250,7 +253,7 @@ behavior_server:
   ros__parameters:
     costmap_topic: local_costmap/costmap_raw
     footprint_topic: local_costmap/published_footprint
-    cycle_frequency: 15.0
+    cycle_frequency: 30.0
     behavior_plugins: ["backup", "spin", "drive_on_heading", "assisted_teleop", "wait"]
     spin:
       plugin: "nav2_behaviors/Spin"
@@ -262,8 +265,8 @@ behavior_server:
       plugin: "nav2_behaviors/Wait"
     assisted_teleop:
       plugin: "nav2_behaviors/AssistedTeleop"
-    local_frame: velodyne
-    global_frame: world
+    local_frame: odom
+    global_frame: map
     robot_base_frame: velodyne
     transform_tolerance: 0.1
     use_sim_time: true

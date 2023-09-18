@@ -190,7 +190,11 @@ class GoalActionServer(Node):
         return [x, y, z, w]
 
 
-    
+    def print_in_orange(self, msg):
+        orange_start = "\033[38;5;208m"  # Orange color in 256-color mode.
+        color_end = "\033[0m"
+        self.get_logger().info(f"{orange_start}{msg}{color_end}")
+
 
     def print_in_blue(self, msg):
         blue_start = "\033[94m"
@@ -278,6 +282,7 @@ class GoalActionServer(Node):
         initial_pose.pose.orientation.w = initial_position.transform.rotation.w
         self.writeTheResult(initial_position, 'initial_pose')
         fail_counter = 0
+        current_attempt = 1
         while True:
 
             for idx, goal_data in enumerate(self.goals_data['goals']):
@@ -303,7 +308,7 @@ class GoalActionServer(Node):
             absolute_nav_time = self.nav.get_clock().now()
             nav_result = True
             current_pose_id = 0
-            absolute_marker_id = 0
+            absolute_marker_id = 1
             check_goal_start = False
             reached = False
             time_within_threshold = None 
@@ -314,11 +319,11 @@ class GoalActionServer(Node):
                     self.print_in_blue('-------------------------------------------------')
                     self.print_in_yellow('STILL has some goals so restart soon!')
                     self.print_in_blue('-------------------------------------------------')
-                    remaining_goals = goal_poses[absolute_marker_id:] 
-                    self.nav.cancelTask()
+                    remaining_goals = goal_poses[absolute_marker_id-1:] 
                     self.nav.goThroughPoses(remaining_goals)
                     nav_start = self.nav.get_clock().now()
                     check_goal_start = False
+                    current_pose_id = len(goal_poses) - len(remaining_goals)
                     fail_counter +=1
 
                 while not self.nav.isTaskComplete():
@@ -332,20 +337,10 @@ class GoalActionServer(Node):
                         time_within_threshold = None 
                         absolute_marker_id +=1
                     
-                    if previous_speed != self.current_speed:
-                        if self.current_speed == - 0.2:
-                            
-                            self.print_in_yellow('Object detection mode: Reset costmap')
-                            self.nav.clearLocalCostmap()
-                            multiplier = -1 if random.choice([True, False]) else 1
-                            spin_dist = 1.57 * multiplier
-                            self.nav.cancelTask()
-                            # while not self.nav.isTaskComplete():
-                            #     time.sleep(0.1)
-                            # self.doSpin(navigator=self.nav, spin_dist=spin_dist)
-
-                            remaining_goals = goal_poses[absolute_marker_id:] 
-                            self.nav.goThroughPoses(remaining_goals)
+                    # if previous_speed != self.current_speed:
+                    #     if self.current_speed == - 0.2:
+                    #         self.print_in_yellow('Object detection mode: Reset costmap')
+                    #         self.nav.clearLocalCostmap()
                             
                     previous_speed = self.current_speed 
 
@@ -355,6 +350,8 @@ class GoalActionServer(Node):
                     dis_to_waypoint = self.distance_to_next(goal_poses[target_pose_id])
                     if feedback and i % 5 == 0:
                         self.print_in_blue('-------------------------------------------------')
+                        self.print_in_orange('Current attempt is ' + '{:d}'.format(
+                        current_attempt) + " th")
                         self.print_in_green('Target pose id: ' + '{:d}'.format(
                         absolute_marker_id))
                         self.get_logger().info('Distance remaining to the end goal: ' + '{:.2f}'.format(
@@ -394,7 +391,6 @@ class GoalActionServer(Node):
                                 # Skip to the next pose
                                 remaining_goals = goal_poses[absolute_marker_id:]  # Slice the list to start from the next pose
                                 if len(remaining_goals) > 0:  # If there are remaining goals
-                                    self.nav.cancelTask()
                                     self.nav.goThroughPoses(remaining_goals)  # Send the robot to the next set of poses
                                     nav_start = self.nav.get_clock().now()
                                     current_pose_id = 0
@@ -462,6 +458,8 @@ class GoalActionServer(Node):
                     # For simplicity, this is omitted, but you'd likely set up a subscriber or some other mechanism.
             if loop == False or fail_counter > 100:
                 break     
+            else:
+                current_attempt +=1
 
         # Simulated wait for simplicity
         if nav_result == TaskResult.SUCCEEDED:
