@@ -13,7 +13,7 @@ class IMUToPoseNode(Node):
         # Subscriber
         self.subscription = self.create_subscription(
             Imu,
-            'imu',
+            '/imu/data',
             self.imu_callback,
             10
         )
@@ -28,9 +28,9 @@ class IMUToPoseNode(Node):
         dt = (current_time[0] + current_time[1]*1e-9) - (self.last_time[0] + self.last_time[1]*1e-9)
         
         # Integrate acceleration to get velocity
-        self.velocity[0] += imu_msg.linear_acceleration.x * dt
-        self.velocity[1] += imu_msg.linear_acceleration.y * dt
-        self.velocity[2] += imu_msg.linear_acceleration.z * dt
+        self.velocity[0] += (imu_msg.linear_acceleration.x) * dt
+        self.velocity[1] += (imu_msg.linear_acceleration.y) * dt
+        self.velocity[2] += (imu_msg.linear_acceleration.z-9.85) * dt
 
         # Integrate velocity to get position
         self.position[0] += self.velocity[0] * dt

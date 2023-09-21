@@ -9,7 +9,16 @@ public:
     SafetyRelay()
         : Node("saftey_relay")
     {
-        cmd_vel_publisher_  = this->create_publisher<geometry_msgs::msg::Twist>("/diff_cont/cmd_vel_unstamped", 10);
+        // 1. Declare the parameter
+        this->declare_parameter<std::string>("cmd_vel_topic", "/diff_cont/cmd_vel_unstamped");
+        
+        // 2. Retrieve the parameter value
+        std::string cmd_vel_topic;
+        this->get_parameter("cmd_vel_topic", cmd_vel_topic);
+        
+        // 3. Initialize the publisher using the retrieved topic name
+        cmd_vel_publisher_  = this->create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic, 10);
+        
 
         scan_subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
             "/scan_for_move", rclcpp::SensorDataQoS(), std::bind(&SafetyRelay::scan_callback, this, std::placeholders::_1));
@@ -28,8 +37,8 @@ private:
         for (int i = index_min; i < index_max; i++)
         {   
             if ((ranges[i] < 1.0 && i >= index_min_slowdown && i <= index_max_slowdown) || 
-                (backup && ranges[i] < 3.0 )){
-                twist.linear.x = - 0.2;
+                (backup && ranges[i] < 1.5 )){
+                twist.linear.x = -0.1;
                 RCLCPP_WARN(this->get_logger(), "Back up ");
                 scan_checker = true;
                 backup = true;
@@ -39,13 +48,14 @@ private:
                 twist.linear.x = 0.0;
                 RCLCPP_WARN(this->get_logger(), "Stop");
                 scan_checker = true;
-                backup = true;
+                backup = false;
                 break;
             }
             else if (ranges[i] < 2.0 && i >= index_min_slowdown && i <= index_max_slowdown){
                 twist.linear.x = 0.2;
                 RCLCPP_WARN(this->get_logger(), "Slow down a little bit");
                 scan_checker = true;
+                backup = false;
                 break;
             }else if (ranges[i] < 3.0 && i >= index_min_slowdown && i <= index_max_slowdown){
                 twist.linear.x = 0.3;
@@ -77,24 +87,24 @@ private:
             twist.linear.x = msg->linear.x; 
 
                     
-        if (twist.linear.x < 0){
-            double angular_vel = 0.2;
+        // if (twist.linear.x < 0){
+        //     double angular_vel = 0.2;
 
-            // TODO: multiply -1 with 50/50 here
-            std::random_device rd;  // Will be used to obtain a seed for the random number engine
-            std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-            std::uniform_int_distribution<> distrib(0, 1);  // Define the range
+        //     // TODO: multiply -1 with 50/50 here
+        //     std::random_device rd;  // Will be used to obtain a seed for the random number engine
+        //     std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
+        //     std::uniform_int_distribution<> distrib(0, 1);  // Define the range
 
-            if (distrib(gen) == 0) {  // 50% chance to be 0 or 1
-                angular_vel *= -1;
-            }
-            twist.angular.z = angular_vel;
-        }
+        //     if (distrib(gen) == 0) {  // 50% chance to be 0 or 1
+        //         angular_vel *= -1;
+        //     }
+        //     twist.angular.z = angular_vel;
+        // }
 
 
 
         if (fabs(twist.angular.z) < 0.2 && fabs(twist.linear.x) <= 0.01)
-            twist.angular.z *= 3;
+            twist.angular.z *= 1.5;
         cmd_vel_publisher_->publish(twist);
     }
 

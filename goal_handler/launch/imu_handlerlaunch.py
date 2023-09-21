@@ -12,8 +12,6 @@ from launch.event_handlers import OnProcessExit
 def generate_launch_description():
     home_directory = os.path.expanduser('~')
     print(home_directory)
-    goal_save_path = home_directory + "/humble_ws/src/nav2_kit/goal_handler/goals/"
-    cmd_vel_topic = "/diff_cont/cmd_vel_unstamped"
     
     imu_pose_node =  Node(
             package='goal_handler',
@@ -26,7 +24,7 @@ def generate_launch_description():
             package='tf2_ros',
             executable='static_transform_publisher',
             name='map_to_imu',
-            arguments=['0', '0', '0', '0', '0', '0', '1', 'map', 'imu']
+            arguments=['0', '0', '0', '0', '0', '0', '1', 'map', 'odom']
         )
 
 

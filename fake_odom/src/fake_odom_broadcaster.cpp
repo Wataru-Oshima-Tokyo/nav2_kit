@@ -19,7 +19,7 @@ private:
     {
         try
         {
-            auto trans = tfBuffer_.lookupTransform("odom", "velodyne", rclcpp::Time());
+            auto trans = tfBuffer_.lookupTransform("map", "velodyne", rclcpp::Time());
             trans.child_frame_id = "base_link";
             broadcaster_->sendTransform(trans);
         }
