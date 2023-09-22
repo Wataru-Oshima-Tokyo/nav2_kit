@@ -15,7 +15,7 @@
 
 #### 要件:
 - OS: Ubuntu 22.04 
-  - Docker使用時は[こちら](https://github.com/TechShare-inc/ros_here.git)
+  - Docker使用時は[こちら](https://github.com/TechShare-inc/ros_here/tree/main/humble)
 - RAM: 8GB以上
 - CPU: 8コア
 - GPU: なくても可 (ただし、シミュレーション使用時は推奨)
