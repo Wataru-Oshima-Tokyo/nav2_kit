@@ -76,25 +76,13 @@ private:
         if(!warning || fabs(msg->linear.x) < fabs(twist.linear.x))
             twist.linear.x = msg->linear.x; 
 
-                    
-        if (twist.linear.x < 0){
-            double angular_vel = 0.2;
-
-            // TODO: multiply -1 with 50/50 here
-            std::random_device rd;  // Will be used to obtain a seed for the random number engine
-            std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-            std::uniform_int_distribution<> distrib(0, 1);  // Define the range
-
-            if (distrib(gen) == 0) {  // 50% chance to be 0 or 1
-                angular_vel *= -1;
-            }
-            twist.angular.z = angular_vel;
-        }
-
 
 
         if (fabs(twist.angular.z) < 0.2 && fabs(twist.linear.x) <= 0.01)
-            twist.angular.z *= 3;
+            if (!(fabs(twist.angular.z) < 0.1 ))
+                twist.angular.z *= 3;
+            else
+                twist.angular.z = 0;
         cmd_vel_publisher_->publish(twist);
     }
 

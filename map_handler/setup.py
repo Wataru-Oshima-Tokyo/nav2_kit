@@ -11,6 +11,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
          ('share/' + package_name + '/launch', glob.glob('launch/*.py')),
+         ('share/' + package_name + '/param', glob.glob('param/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -22,6 +23,7 @@ setup(
     entry_points={
         'console_scripts': [
              'map_position_change_node = map_handler.load_map:main',
+             'marker_localization = map_handler.marker_to_odom:main',
         ],
     },
 )

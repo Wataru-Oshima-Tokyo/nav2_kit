@@ -19,6 +19,7 @@ def launch_setup(context, *args, **kwargs):
 
     map_config = os.path.join(get_package_share_directory(
         'robot_navigation'), 'param', 'map_config.yaml')
+    
     map_handler =  Node(
             package='map_handler',
             executable='map_position_change_node',
