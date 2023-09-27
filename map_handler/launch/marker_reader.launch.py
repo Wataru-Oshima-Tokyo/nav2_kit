@@ -17,14 +17,14 @@ def launch_setup(context, *args, **kwargs):
     camera_name = LaunchConfiguration('camera_name').perform(context)
     camera_topic = "/" + camera_name +"/image_raw"
     camera_info = "/" + camera_name + "/camera_info"
-    map_name = map_name + ".yaml"
+    marker_name = map_name + "_marker.yaml"
 
 
     share_dir = get_package_share_directory('map_handler')
     # Define the path to the parameter file
     tag_param_file = os.path.join(share_dir,'param', 'tags_36h11.yaml')
 
-    marker_param_file = os.path.join(share_dir, 'param', map_name)
+    marker_param_file = os.path.join(share_dir, 'param', marker_name)
     
     # Load parameters
     with open(marker_param_file, 'r') as f:
@@ -70,7 +70,7 @@ def launch_setup(context, *args, **kwargs):
     ]
 
 def generate_launch_description():
-    map_name_arg = DeclareLaunchArgument('map_name', default_value='map_sh', description='Name of the map')
+    map_name_arg = DeclareLaunchArgument('map_name', default_value='sh', description='Name of the map')
     camera_name_arg = DeclareLaunchArgument('camera_name', default_value='camera', description='Name of the map')
 
     return LaunchDescription([

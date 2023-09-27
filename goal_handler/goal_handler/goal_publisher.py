@@ -21,8 +21,10 @@ class GoalActionServer(Node):
     def __init__(self):
         super().__init__('nav_goal_handler')
         self.declare_parameter('goals_file', '/')
+        self.declare_parameter('goal_name', 'goals.yaml')
         self.declare_parameter('cmd_vel', 'cmd_vel')
-        self.output_file = self.get_parameter('goals_file').get_parameter_value().string_value + "goals.yaml"
+        self.output_file = (self.get_parameter('goals_file').get_parameter_value().string_value 
+                            + self.get_parameter('goal_name').get_parameter_value().string_value )
         # Get the current date and time and format it as a string
         current_datetime = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         base_filename = 'current_pose_{}.yaml'.format(current_datetime)

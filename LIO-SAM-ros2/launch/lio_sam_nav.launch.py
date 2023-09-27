@@ -1,19 +1,45 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument,IncludeLaunchDescription,RegisterEventHandler,GroupAction
+from launch.actions import DeclareLaunchArgument,IncludeLaunchDescription,RegisterEventHandler,GroupAction,OpaqueFunction
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration,PythonExpression,Command,PathJoinSubstitution
 from launch.event_handlers import OnProcessStart, OnProcessExit
 
-def generate_launch_description():
 
+def launch_setup(context, *args, **kwargs):
     share_dir = get_package_share_directory('lio_sam')
     sim = LaunchConfiguration('sim')
+    map_name = LaunchConfiguration('map_name').perform(context)
+    nav_param_file = map_name + "_nav.yaml"
     navigation_param = os.path.join(get_package_share_directory(
-        'robot_navigation'), 'param', "slam.yaml")
+        'robot_navigation'), 'param', nav_param_file)
+    nav_to_pose_xml = os.path.join(get_package_share_directory(
+        'robot_navigation'), 'param', "nav_to_pose_and_pause_near_goal_obstacle.xml")
+    nav_thr_pose_xml = os.path.join(get_package_share_directory(
+        'robot_navigation'), 'param', "nav_thr_poses.xml")
+    navigation_launch_path = PathJoinSubstitution(
+        [FindPackageShare('nav2_bringup'), 'launch', 'navigation_launch.py']
+    )
+
+    navigation_node =  IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(navigation_launch_path),
+            launch_arguments={
+                'use_sim_time': LaunchConfiguration("sim"),
+                'params_file': navigation_param,
+                'default_nav_to_pose_bt_xml': nav_to_pose_xml  # Set the parameter directly
+            }.items()
+    )
+    return [
+        navigation_node
+    ]
+
+def generate_launch_description():
+
+
+
 
     sim_declare =  DeclareLaunchArgument(
             name='sim', 
@@ -21,23 +47,14 @@ def generate_launch_description():
             description='Enable use_sime_time to true'
     )
 
-    
-    navigation_launch_path = PathJoinSubstitution(
-        [FindPackageShare('nav2_bringup'), 'launch', 'navigation_launch.py']
+    map_name_declare =  DeclareLaunchArgument(
+            name='map_name', 
+            default_value='sh',
+            description='Enable use_sime_time to true'
     )
-    navigation_node =  IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(navigation_launch_path),
-            launch_arguments={
-                'use_sim_time': LaunchConfiguration("sim"),
-                'params_file': navigation_param
-            }.items()
-    )
-
-
-
 
     return LaunchDescription([
         sim_declare,
-        navigation_node
-        # delayed_lio_sam_server,
+        map_name_declare,
+        OpaqueFunction(function=launch_setup)
     ])
