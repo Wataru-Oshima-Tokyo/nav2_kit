@@ -78,11 +78,19 @@ private:
 
 
 
-        if (fabs(twist.angular.z) < 0.2 && fabs(twist.linear.x) <= 0.01)
+        if (fabs(twist.angular.z) < 0.2 && fabs(twist.linear.x) <= 0.01){
             if (!(fabs(twist.angular.z) < 0.1001 ))
-                twist.angular.z *= 3;
+                twist.angular.z *= 7;
             else
                 twist.angular.z = 0;
+        }else if (!warning){
+            twist.linear.x *=3;
+            twist.angular.z  *=3;
+        }else{
+            twist.angular.z  *=3;
+        }
+
+
         cmd_vel_publisher_->publish(twist);
     }
 

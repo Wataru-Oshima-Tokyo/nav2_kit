@@ -14,6 +14,9 @@ from launch.substitutions import LaunchConfiguration
 def launch_setup(context, *args, **kwargs):
     # Retrieve the path to the apriltag_ros package
     map_name = LaunchConfiguration('map_name').perform(context)
+    camera_name = LaunchConfiguration('camera_name').perform(context)
+    camera_topic = "/" + camera_name +"/image_raw"
+    camera_info = "/" + camera_name + "/camera_info"
     map_name = map_name + ".yaml"
 
 
@@ -59,8 +62,8 @@ def launch_setup(context, *args, **kwargs):
             executable='apriltag_node',
             name='apriltag_node',
             remappings=[
-                ('image_rect', '/camera/image_raw'),
-                ('camera_info', '/camera/camera_info')
+                ('image_rect', camera_topic),
+                ('camera_info', camera_info)
             ],
             parameters=[tag_param_file]
         )
@@ -68,9 +71,11 @@ def launch_setup(context, *args, **kwargs):
 
 def generate_launch_description():
     map_name_arg = DeclareLaunchArgument('map_name', default_value='map_sh', description='Name of the map')
+    camera_name_arg = DeclareLaunchArgument('camera_name', default_value='camera', description='Name of the map')
 
     return LaunchDescription([
         map_name_arg,
+        camera_name_arg,
         OpaqueFunction(function=launch_setup)
     ])
 

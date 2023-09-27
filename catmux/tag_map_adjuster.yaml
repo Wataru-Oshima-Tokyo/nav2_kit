@@ -3,11 +3,11 @@ common:
   default_window: goal_handler
 parameters:
   robot_name: diffbot
-  map_name: aksk
-  world_name: map_aksk_with_obstacles_lite2
+  map_name: shimizu
+  world_name: map_shimizu
   lidar_type: velodyne
   use_simulator: True
-  headless: True
+  headless: false
   rviz_name: tag_map.rviz
 windows:
   - name: aksk_wolrd
@@ -15,7 +15,7 @@ windows:
       - ros2 launch sim_worlds2 launch_world.launch.py use_simulator:=${use_simulator} headless:=${headless} world_name:=${world_name} rviz_file:=${rviz_name}
   - name: spawn_diffbot
     commands:
-      - ros2 launch sim_worlds2 spawn_diffbot.launch.py spawn_x_val:=-20
+      - ros2 launch sim_worlds2 spawn_diffbot.launch.py spawn_x_val:=0
   - name: tag_server
     commands:
       - ros2 launch map_handler marker_reader.launch.py map_name:=${map_name}
