@@ -39,13 +39,14 @@ private:
                 twist.linear.x = 0.0;
                 RCLCPP_WARN(this->get_logger(), "Stop");
                 scan_checker = true;
-                backup = true;
+                backup = false;
                 break;
             }
             else if (ranges[i] < 2.0 && i >= index_min_slowdown && i <= index_max_slowdown){
                 twist.linear.x = 0.2;
                 RCLCPP_WARN(this->get_logger(), "Slow down a little bit");
                 scan_checker = true;
+                backup = false;
                 break;
             }else if (ranges[i] < 3.0 && i >= index_min_slowdown && i <= index_max_slowdown){
                 twist.linear.x = 0.3;
@@ -80,13 +81,14 @@ private:
 
         if (fabs(twist.angular.z) < 0.2 && fabs(twist.linear.x) <= 0.01){
             if (!(fabs(twist.angular.z) < 0.1001 ))
-                twist.angular.z *= 7;
+                twist.angular.z *= 15;
             else
                 twist.angular.z = 0;
         }else if (!warning){
             twist.linear.x *=3;
-            twist.angular.z  *=3;
+            twist.angular.z  *=5;
         }else{
+            twist.linear.x *= 1.5;
             twist.angular.z  *=3;
         }
 
