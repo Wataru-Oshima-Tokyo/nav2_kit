@@ -1,0 +1,41 @@
+---
+common:
+  default_window: goal_handler
+parameters:
+  robot_name: scout_mini
+  map_name: white
+  world_name: slope_environment
+  lidar_type: velodyne
+  map_filter_name: aksk_keepout
+  use_simulator: True
+  headless: False
+  camera_name: front_camera
+  rviz_name: limo_nav.rviz
+windows:
+  - name: lidar_util
+    commands:
+      - ros2 launch robot_navigation robot_lidar_util.launch.py lidar_type:=${lidar_type}
+  - name: aksk_wolrd
+    commands:
+      - ros2 launch sim_worlds2 launch_world.launch.py use_simulator:=${use_simulator} headless:=${headless} world_name:=${world_name} rviz_file:=${rviz_name}
+  - name: spawn_diffbot
+    commands:
+      - ros2 launch sim_worlds2 spawn_scout_mini.launch.py spawn_x_val:=0 spawn_z_val:=1
+  - name: tag_server
+    commands:
+      - ros2 launch map_handler marker_reader.launch.py map_name:=aksk camera_name:=${camera_name}
+  - name: map_server
+    commands:
+      - sleep 3
+      - ros2 launch map_handler load_map.launch.py map_name:=aksk
+  - name: lio_sam_node
+    commands:
+      - sleep 1
+      - ros2 launch lio_sam slam.launch.py
+  - name: lio_sam_nav
+    commands:
+      - sleep 5
+      - ros2 launch lio_sam lio_sam_nav.launch.py map_name:=aksk
+  - name: goal_handler
+    commands:
+      - ros2 launch goal_handler goal_handler.launch.py map_name:=aksk
