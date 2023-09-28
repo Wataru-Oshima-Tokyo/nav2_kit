@@ -29,7 +29,9 @@ def launch_setup(context, *args, **kwargs):
             launch_arguments={
                 'use_sim_time': LaunchConfiguration("sim"),
                 'params_file': navigation_param,
-                'default_nav_to_pose_bt_xml': nav_to_pose_xml  # Set the parameter directly
+                'default_nav_to_pose_bt_xml': nav_to_pose_xml,  # Set the parameter directly
+                'default_nav_through_poses_bt_xml': nav_thr_pose_xml  # Set the parameter directly
+
             }.items()
     )
     return [
