@@ -1,12 +1,12 @@
 ---
 common:
-  default_window: goal_handler
+  default_window: rcs_client
 parameters:
   robot_name: scout_mini
-  map_name: aksk
-  world_name: map_aksk_with_obstacles_lite2
+  map_name: ts_1st
+  world_name: map_ts_1st
   lidar_type: velodyne
-  map_filter_name: aksk_keepout
+  map_filter_name: ts_1st_keepout
   use_simulator: True
   headless: False
   camera_name: front_camera
@@ -16,12 +16,12 @@ windows:
   - name: lidar_util
     commands:
       - ros2 launch robot_navigation robot_lidar_util.launch.py lidar_type:=${lidar_type}
-  - name: aksk_wolrd
+  - name: ts_1st_world
     commands:
-      - ros2 launch sim_worlds2 launch_world.launch.py use_simulator:=${use_simulator} headless:=${headless} world_name:=${world_name} rviz_file:=${rviz_name}
+      - ros2 launch sim_worlds2 launch_world.launch.py use_simulator:=${use_simulator} headless:=${headless} world_name:=${world_name} 
   - name: spawn_diffbot
     commands:
-      - ros2 launch sim_worlds2 spawn_scout_mini.launch.py spawn_x_val:=-20 
+      - ros2 launch sim_worlds2 spawn_scout_mini.launch.py spawn_x_val:=0
   - name: tag_server
     commands:
       - ros2 launch map_handler marker_reader.launch.py map_name:=${map_name} camera_name:=${camera_name}

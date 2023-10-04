@@ -24,6 +24,7 @@ class MapConverter(Node):
         qos = QoSProfile(depth=10)
         self.test_map_pub = self.create_publisher(OccupancyGrid, 'test_map', qos)
         self.subscription = self.create_subscription(OccupancyGrid, map_topic, self.map_callback, qos)
+        self.get_logger().info('START MAP CONVERTER')
         
     def map_callback(self, map_msg):
         self.get_logger().info('Received map')

@@ -23,22 +23,14 @@ def generate_launch_description():
             share_dir, 'config', 'world_map.yaml'),
         description='FPath to the ROS2 parameters file to use.')
     
+    # velodyne_to_fake_velodyne =  Node(
+    #     package='fake_frame',
+    #     executable='fake_point_clouds',
+    #     name='velodyne_to_fake_velodyne',
+    #         parameters=[{'fake_frame_id': fake_frame},
+    #                     {'target_topic': "points_raw"}]   
+    # )
 
-    # velodyne_odom_to_base_link_node =  Node(
-    #         package='fake_frame',
-    #         executable='fake_odom_broadcaster',
-    #         name='fake_odom_to_base_link',
-    #     )
-
-
-    velodyne_to_fake_velodyne =  Node(
-        package='fake_frame',
-        executable='fake_point_clouds',
-        name='velodyne_to_fake_velodyne',
-            parameters=[{'fake_frame_id': fake_frame},
-                        {'target_topic': "points_raw"}]
-        
-    )
     velodyne_to_base_link =  Node(
         package='fake_frame',
         executable='fake_dynamic_tf_broadcaster',
@@ -48,15 +40,18 @@ def generate_launch_description():
                         {"use_sim_time": True}]
         
     )
-    base_link_to_fake_velodyne =  Node(
-        package='fake_frame',
-        executable='fake_dynamic_tf_broadcaster',
-        name='map_to_odom',
-            parameters=[{'parent_link': "velodyne"},
-                        {'child_link': fake_frame},
-                        {"use_sim_time": True}]
+
+
+
+    # base_link_to_fake_velodyne =  Node(
+    #     package='fake_frame',
+    #     executable='fake_dynamic_tf_broadcaster',
+    #     name='map_to_odom',
+    #         parameters=[{'parent_link': "velodyne"},
+    #                     {'child_link': fake_frame},
+    #                     {"use_sim_time": True}]
         
-    )
+    # )
     # world_to_map_node =  Node(
     #     package='fake_frame',
     #     executable='fake_dynamic_tf_broadcaster',
@@ -79,12 +74,12 @@ def generate_launch_description():
             arguments=['0', '0', '0', '0', '0', '0', '1', 'world', 'map']
     )
     
-    base_link_fake_velodyne =  Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name='base_link_to_fake_velodyne',
-            arguments=['0', '0', '0', '0', '0', '0', '1', 'base_link', fake_frame]
-        )
+    # base_link_fake_velodyne =  Node(
+    #         package='tf2_ros',
+    #         executable='static_transform_publisher',
+    #         name='base_link_to_fake_velodyne',
+    #         arguments=['0', '0', '0', '0', '0', '0', '1', 'base_link', fake_frame]
+    #     )
 
     lio_sam_nodes = GroupAction(
         actions=[
@@ -139,12 +134,13 @@ def generate_launch_description():
             on_start=[velodyne_to_base_link],
         )
     )
-    delayed_fake_velodyne =   RegisterEventHandler(
-        event_handler=OnProcessStart(
-            target_action=velodyne_to_base_link,
-            on_start=[base_link_to_fake_velodyne],
-        )
-    )
+
+    # delayed_fake_velodyne =   RegisterEventHandler(
+    #     event_handler=OnProcessStart(
+    #         target_action=velodyne_to_base_link,
+    #         on_start=[base_link_to_fake_velodyne],
+    #     )
+    # )
 
 
     return LaunchDescription([
@@ -152,6 +148,6 @@ def generate_launch_description():
         static_world_to_map_node,
         delayed_lio_sam_server,
         delayed_fake_odom,
-        velodyne_to_fake_velodyne,
-        delayed_fake_velodyne,
+        # velodyne_to_fake_velodyne,
+        # delayed_fake_velodyne,
     ])
