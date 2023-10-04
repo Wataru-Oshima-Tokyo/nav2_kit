@@ -15,7 +15,7 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
-            remappings=[('cloud_in', '/fake/points_raw'),
+            remappings=[('cloud_in', '/points_raw'),
                         ('scan', '/scan')],
             parameters=[{
                 'transform_tolerance': 0.01,
@@ -34,7 +34,7 @@ def generate_launch_description():
         ),
         Node(
             package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
-            remappings=[('cloud_in', '/fake/points_raw'),
+            remappings=[('cloud_in', '/points_raw'),
                         ('scan', '/scan_for_amcl')],
             parameters=[{
                 'transform_tolerance': 0.01,
@@ -53,7 +53,7 @@ def generate_launch_description():
         ),
         Node(
             package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
-            remappings=[('cloud_in', '/fake/points_raw'),
+            remappings=[('cloud_in', '/points_raw'),
                         ('scan', '/scan_for_move')],
             parameters=[{
                 'transform_tolerance': 0.01,

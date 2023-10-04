@@ -7,6 +7,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration,PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 import distro
+from nav2_common.launch import RewrittenYaml
 
 def get_ros2_distro():
     ubuntu_version = distro.version()
@@ -30,6 +31,25 @@ def launch_setup(context, *args, **kwargs):
     map_file = os.path.join(get_package_share_directory('sim_worlds2'),
         'maps',
          map_name)          
+    nav_to_pose_xml = os.path.join(get_package_share_directory(
+        'robot_navigation'), 'param', "nav_to_pose_and_pause_near_goal_obstacle.xml")
+    nav_thr_pose_xml = os.path.join(get_package_share_directory(
+        'robot_navigation'), 'param', "nav_thr_poses.xml")
+
+
+    param_substitutions = {
+        'use_sim_time': use_sim_time,
+        'default_bt_xml_filename': nav_to_pose_xml,
+        'map_subscribe_transient_local': nav_thr_pose_xml}
+
+    configured_params = RewrittenYaml(
+            source_file=param_dir,
+            root_key='',
+            param_rewrites=param_substitutions,
+            convert_types=True)
+
+
+
     nav2_launch_file_dir = os.path.join(get_package_share_directory('nav2_bringup'), 'launch')    
     return [
         IncludeLaunchDescription(
@@ -37,7 +57,7 @@ def launch_setup(context, *args, **kwargs):
             launch_arguments={
                 'map': map_file,
                 'use_sim_time': use_sim_time,
-                'params_file': param_dir,
+                'params_file': configured_params,
                 }.items(),
         ),
     ]

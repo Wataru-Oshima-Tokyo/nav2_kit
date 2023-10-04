@@ -10,7 +10,7 @@ parameters:
   use_simulator: True
   headless: False
   camera_name: front_camera
-  rviz_name: limo_nav.rviz
+  rviz_name: scout_mini_nav.rviz
 windows:
   - name: lidar_util
     commands:

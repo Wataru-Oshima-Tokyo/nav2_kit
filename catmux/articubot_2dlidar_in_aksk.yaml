@@ -1,0 +1,26 @@
+---
+common:
+  default_window: goal_handler
+parameters:
+  robot_name: diffbot
+  map_name: aksk
+  world_name: map_aksk_with_obstacles_lite2
+  lidar_type: velodyne
+  map_filter_name: aksk_keepout
+  use_simulator: True
+  headless: True
+  rviz_name: limo_nav.rviz
+windows:
+  - name: aksk_wolrd
+    commands:
+      - ros2 launch sim_worlds2 launch_world.launch.py use_simulator:=${use_simulator} headless:=${headless} world_name:=${world_name} rviz_file:=${rviz_name}
+  - name: spawn_diffbot
+    commands:
+      - ros2 launch sim_worlds2 spawn_diffbot_2dlidar.launch.py spawn_x_val:=-20 
+  - name: navigation 
+    commands:
+      - sleep 1
+      - ros2 launch robot_navigation nav2_start.launch.py map_name:=${map_name} robot_name:=${robot_name}
+  - name: goal_handler
+    commands:
+      - ros2 launch goal_handler goal_handler.launch.py map_name:=${map_name}

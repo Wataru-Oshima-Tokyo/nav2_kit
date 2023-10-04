@@ -322,6 +322,7 @@ class GoalActionServer(Node):
                     self.print_in_yellow('STILL has some goals so restart soon!')
                     self.print_in_blue('-------------------------------------------------')
                     remaining_goals = goal_poses[absolute_marker_id-1:] 
+                    self.nav.cancelTask()
                     self.nav.goThroughPoses(remaining_goals)
                     nav_start = self.nav.get_clock().now()
                     check_goal_start = False
@@ -393,6 +394,7 @@ class GoalActionServer(Node):
                                 # Skip to the next pose
                                 remaining_goals = goal_poses[absolute_marker_id:]  # Slice the list to start from the next pose
                                 if len(remaining_goals) > 0:  # If there are remaining goals
+                                    self.nav.cancelTask()
                                     self.nav.goThroughPoses(remaining_goals)  # Send the robot to the next set of poses
                                     nav_start = self.nav.get_clock().now()
                                     current_pose_id = 0

@@ -1,0 +1,9 @@
+static_transform:
+  x: 10.0
+  y: 3.23
+  z: 0
+  roll: 0
+  pitch: 0
+  yaw: 0
+  frame_id: map
+  child_frame_id: marker
