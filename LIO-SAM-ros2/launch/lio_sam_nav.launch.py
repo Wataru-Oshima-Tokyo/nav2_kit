@@ -7,6 +7,7 @@ from launch_ros.substitutions import FindPackageShare
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration,PythonExpression,Command,PathJoinSubstitution
 from launch.event_handlers import OnProcessStart, OnProcessExit
+from nav2_common.launch import RewrittenYaml
 
 
 def launch_setup(context, *args, **kwargs):
@@ -24,14 +25,22 @@ def launch_setup(context, *args, **kwargs):
         [FindPackageShare('nav2_bringup'), 'launch', 'navigation_launch.py']
     )
 
+    param_substitutions = {
+        'default_nav_to_pose_bt_xml': nav_to_pose_xml,
+        'default_nav_through_poses_bt_xml': nav_thr_pose_xml}
+
+    configured_params = RewrittenYaml(
+            source_file=navigation_param,
+            root_key='',
+            param_rewrites=param_substitutions,
+            convert_types=True)
+
+
     navigation_node =  IncludeLaunchDescription(
             PythonLaunchDescriptionSource(navigation_launch_path),
             launch_arguments={
                 'use_sim_time': LaunchConfiguration("sim"),
-                'params_file': navigation_param,
-                'default_nav_to_pose_bt_xml': nav_to_pose_xml,  # Set the parameter directly
-                'default_nav_through_poses_bt_xml': nav_thr_pose_xml  # Set the parameter directly
-
+                'params_file': configured_params
             }.items()
     )
     return [

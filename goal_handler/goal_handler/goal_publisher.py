@@ -411,7 +411,7 @@ class GoalActionServer(Node):
 
                     
                     # Some navigation timeout to demo cancellation
-                    if time_difference_secs > 300.0:
+                    if time_difference_secs > 500.0:
                         self.print_in_red('MOVE BASE Goal canceled due to timeout')
                         self.nav.cancelTask()
                         break
