@@ -3,18 +3,20 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import IncludeLaunchDescription, ExecuteProcess,RegisterEventHandler
+from launch.actions import IncludeLaunchDescription,DeclareLaunchArgument, ExecuteProcess,RegisterEventHandler,OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.substitutions import FindPackageShare
+from launch.substitutions import LaunchConfiguration,PythonExpression, Command
 from launch.event_handlers import OnProcessExit
 
-
-def generate_launch_description():
+def launch_setup(context, *args, **kwargs):
     home_directory = os.path.expanduser('~')
     print(home_directory)
     goal_save_path = home_directory + "/humble_ws/src/nav2_kit/goal_handler/goals/"
     cmd_vel_topic = "/diff_cont/cmd_vel_unstamped"
-    
+    map_name = LaunchConfiguration('map_name').perform(context)
+    goal_name = map_name + "_goals.yaml"
+
     goal_handler =  Node(
             package='goal_handler',
             executable='goal_saver_node',
@@ -29,12 +31,26 @@ def generate_launch_description():
             name='goal_handler_node',
             respawn=True,
             output='screen',
-            parameters=[{"goals_file": goal_save_path}, {"cmd_vel": cmd_vel_topic}]
+            parameters=[{"goals_file": goal_save_path}, {"cmd_vel": cmd_vel_topic}, {"goal_name": goal_name}]
 
         )
 
-
-    return LaunchDescription([
+    return [
         goal_handler,
         goal_publisher
+    ]
+def generate_launch_description():
+
+    map_name_declare =  DeclareLaunchArgument(
+            name='map_name', 
+            default_value='sh',
+            description='Enable use_sime_time to true'
+    )
+
+
+
+    return LaunchDescription([
+
+        map_name_declare,
+        OpaqueFunction(function=launch_setup)
     ])

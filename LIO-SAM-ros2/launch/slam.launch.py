@@ -8,6 +8,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration,PythonExpression,Command,PathJoinSubstitution
 from launch.event_handlers import OnProcessStart, OnProcessExit
 
+
 def generate_launch_description():
     fake_frame = "fake_velodyne_link"
     share_dir = get_package_share_directory('lio_sam')
