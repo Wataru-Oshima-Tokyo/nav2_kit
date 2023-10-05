@@ -21,7 +21,8 @@ public:
         this->declare_parameter<double>("angle_max", 60.0);
         this->declare_parameter<double>("range_min", 0.1);
         this->declare_parameter<double>("range_max", 1.5);
-        this->declare_parameter<std::string>("point_clouds_topic", "trimmed_points");
+        this->declare_parameter<std::string>("cloud_in", "points_raw");
+        this->declare_parameter<std::string>("cloud_out", "trimmed_points");
 
         // Get the parameters
         this->get_parameter("min_height", min_height_);
@@ -30,10 +31,11 @@ public:
         this->get_parameter("angle_max", max_angle_);
         this->get_parameter("range_min", min_length_);
         this->get_parameter("range_max", max_length_);
-        this->get_parameter("point_clouds_topic", point_clouds_topic_);
-        publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(point_clouds_topic_, 10);
+        this->get_parameter("cloud_in", cloud_in);
+        this->get_parameter("cloud_out", cloud_out);
+        publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(cloud_out, 10);
         subscription_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            "points_raw", 10, std::bind(&PointCloudTrimmer::callback, this, std::placeholders::_1));
+            cloud_in, 10, std::bind(&PointCloudTrimmer::callback, this, std::placeholders::_1));
                 // Create the service client
         clear_costmap_client_ = this->create_client<nav2_msgs::srv::ClearEntireCostmap>("global_costmap/clear_entirely_global_costmap");
 
@@ -139,7 +141,8 @@ private:
         double max_angle_;
         double max_length_;
         double min_length_;
-        std::string point_clouds_topic_;
+        std::string cloud_in;
+        std::string cloud_out;
 };
 
 int main(int argc, char **argv)

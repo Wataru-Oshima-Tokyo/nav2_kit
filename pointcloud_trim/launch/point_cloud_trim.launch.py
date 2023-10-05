@@ -11,7 +11,8 @@ def generate_launch_description():
             executable='point_clouds_trim',
             name='trimmer',
             parameters=[{
-                'topic_name': "trimmed_points",  
+                'cloud_in': "points_raw",
+                'cloud_out': "trimmed_points",  
                 'min_height': -1.0,
                 'max_height': 2.0,
                 'angle_min': -60.0,
