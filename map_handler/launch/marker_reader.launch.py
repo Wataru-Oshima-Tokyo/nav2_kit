@@ -19,7 +19,8 @@ def launch_setup(context, *args, **kwargs):
     camera_info = "/" + camera_name + "/camera_info"
     marker_name = map_name + "_marker.yaml"
 
-
+    print(camera_info)
+    print(camera_topic)
     share_dir = get_package_share_directory('map_handler')
     # Define the path to the parameter file
     tag_param_file = os.path.join(share_dir,'param', 'tags_36h11.yaml')
@@ -42,7 +43,7 @@ def launch_setup(context, *args, **kwargs):
     static_map_to_marker_node =  Node(
             package='tf2_ros',
             executable='static_transform_publisher',
-            name='map_to_odom',
+            name='map_to_marker',
             arguments=args
     )
 
@@ -52,7 +53,7 @@ def launch_setup(context, *args, **kwargs):
         name='marker_localization_node',
         respawn=True,
         output='screen',
-        parameters=[{'use_sim_time': True}]
+        parameters=[{'use_sim_time': False}]
     )
     return [
         static_map_to_marker_node,

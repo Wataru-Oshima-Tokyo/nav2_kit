@@ -34,10 +34,10 @@ def generate_launch_description():
     velodyne_to_base_link =  Node(
         package='fake_frame',
         executable='fake_dynamic_tf_broadcaster',
-        name='map_to_odom',
+        name='fake_base_link',
             parameters=[{'parent_link': "velodyne"},
                         {'child_link': "base_link"},
-                        {"use_sim_time": True}]
+                        {"use_sim_time": False}]
         
     )
 
@@ -70,7 +70,7 @@ def generate_launch_description():
     static_world_to_map_node =  Node(
             package='tf2_ros',
             executable='static_transform_publisher',
-            name='map_to_odom',
+            name='world_to_map',
             arguments=['0', '0', '0', '0', '0', '0', '1', 'world', 'map']
     )
     

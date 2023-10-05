@@ -9,7 +9,16 @@ public:
     SafetyRelay()
         : Node("saftey_relay")
     {
-        cmd_vel_publisher_  = this->create_publisher<geometry_msgs::msg::Twist>("/diff_cont/cmd_vel_unstamped", 10);
+        // 1. Declare the parameter
+        this->declare_parameter<std::string>("cmd_vel_topic", "/diff_cont/cmd_vel_unstamped");
+        
+        // 2. Retrieve the parameter value
+        std::string cmd_vel_topic;
+        this->get_parameter("cmd_vel_topic", cmd_vel_topic);
+        
+        // 3. Initialize the publisher using the retrieved topic name
+        cmd_vel_publisher_  = this->create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic, 10);
+        
 
         scan_subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
             "/scan_for_move", rclcpp::SensorDataQoS(), std::bind(&SafetyRelay::scan_callback, this, std::placeholders::_1));

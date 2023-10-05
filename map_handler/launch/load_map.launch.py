@@ -46,7 +46,7 @@ def launch_setup(context, *args, **kwargs):
             executable='lifecycle_manager',
             name='lifecycle_manager_map_server',
             output='screen',
-            parameters=[{'use_sim_time': True},
+            parameters=[{'use_sim_time': False},
                         {'autostart': True},
                         {'bond_timeout': 0.0},
                         {'node_names': ['map_server']}]
