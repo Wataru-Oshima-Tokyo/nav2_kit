@@ -7,12 +7,19 @@ import os
 from ament_index_python.packages import get_package_share_directory
     
 def generate_launch_description():
+    # Declare the launch arguments
+    min_height_for_move_ = LaunchConfiguration('min_height_for_move')
+    min_height_for_move_arg = DeclareLaunchArgument(
+        'min_height_for_move',
+        default_value="-0.1",
+        description='Top-level namespace')
     theta_min_deg = -60
     theta_max_deg = 60
 
     theta_min_rad = theta_min_deg * math.pi / 180
     theta_max_rad = theta_max_deg * math.pi / 180
     return LaunchDescription([
+        min_height_for_move_arg,
         Node(
             package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
             remappings=[('cloud_in', '/points_raw'),
@@ -35,29 +42,10 @@ def generate_launch_description():
         Node(
             package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
             remappings=[('cloud_in', '/points_raw'),
-                        ('scan', '/scan_for_amcl')],
-            parameters=[{
-                'transform_tolerance': 0.01,
-                'min_height': 1.0,
-                'max_height': 15.0,
-                'angle_min': -math.pi,  # -M_PI/2
-                'angle_max': math.pi,  # M_PI/2
-                'angle_increment': 0.0087,  # M_PI/360.0
-                'scan_time': 0.3333,
-                'range_min': 0.1,
-                'range_max': 50.0,
-                'use_inf': False,
-                'inf_epsilon': 4.0
-            }],
-            name='pointcloud_to_laserscan_for_amcl'
-        ),
-        Node(
-            package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
-            remappings=[('cloud_in', '/points_raw'),
                         ('scan', '/scan_for_move')],
             parameters=[{
                 'transform_tolerance': 0.01,
-                'min_height': 0.0,
+                'min_height': min_height_for_move_,
                 'max_height': 3.0,
                 'angle_min': theta_min_rad,
                 'angle_max': theta_max_rad,
