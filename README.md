@@ -27,6 +27,9 @@ cd <workspace name>/src
 git clone --recursive https://github.com/Wataru-Oshima-Tokyo/nav2_kit.git
 cd ..
 rosdep install --from-paths src --ignore-src -r -y
+# Add GTSAM-PPA
+sudo add-apt-repository ppa:borglab/gtsam-release-4.1
+sudo apt install -y libgtsam-dev libgtsam-unstable-dev
 colcon build 
 ```
 

@@ -17,6 +17,11 @@ def launch_setup(context, *args, **kwargs):
         'maps',
          map_name)      
 
+    use_sim_time = LaunchConfiguration('use_sim_time')
+
+
+
+
     map_config = os.path.join(get_package_share_directory(
         'robot_navigation'), 'param', 'map_config.yaml')
     
@@ -46,7 +51,7 @@ def launch_setup(context, *args, **kwargs):
             executable='lifecycle_manager',
             name='lifecycle_manager_map_server',
             output='screen',
-            parameters=[{'use_sim_time': True},
+            parameters=[{'use_sim_time': use_sim_time},
                         {'autostart': True},
                         {'bond_timeout': 0.0},
                         {'node_names': ['map_server']}]
@@ -61,8 +66,12 @@ def launch_setup(context, *args, **kwargs):
 
 def generate_launch_description():
     map_name_arg = DeclareLaunchArgument('map_name', default_value='aksk.yaml', description='Name of the map')
-
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='use sim time or not')
     return LaunchDescription([
         map_name_arg,
+        use_sim_time_arg,
         OpaqueFunction(function=launch_setup)
     ])

@@ -15,11 +15,14 @@ def launch_setup(context, *args, **kwargs):
     # Retrieve the path to the apriltag_ros package
     map_name = LaunchConfiguration('map_name').perform(context)
     camera_name = LaunchConfiguration('camera_name').perform(context)
+    use_sim_time = LaunchConfiguration('use_sim_time')
     camera_topic = "/" + camera_name +"/image_raw"
     camera_info = "/" + camera_name + "/camera_info"
     marker_name = map_name + "_marker.yaml"
 
 
+    print(camera_info)
+    print(camera_topic)
     share_dir = get_package_share_directory('map_handler')
     # Define the path to the parameter file
     tag_param_file = os.path.join(share_dir,'param', 'tags_36h11.yaml')
@@ -42,7 +45,7 @@ def launch_setup(context, *args, **kwargs):
     static_map_to_marker_node =  Node(
             package='tf2_ros',
             executable='static_transform_publisher',
-            name='map_to_odom',
+            name='map_to_marker',
             arguments=args
     )
 
@@ -52,7 +55,7 @@ def launch_setup(context, *args, **kwargs):
         name='marker_localization_node',
         respawn=True,
         output='screen',
-        parameters=[{'use_sim_time': True}]
+        parameters=[{'use_sim_time': use_sim_time}]
     )
     return [
         static_map_to_marker_node,
@@ -72,10 +75,14 @@ def launch_setup(context, *args, **kwargs):
 def generate_launch_description():
     map_name_arg = DeclareLaunchArgument('map_name', default_value='sh', description='Name of the map')
     camera_name_arg = DeclareLaunchArgument('camera_name', default_value='camera', description='Name of the map')
-
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='use sim time or not')
     return LaunchDescription([
         map_name_arg,
         camera_name_arg,
+        use_sim_time_arg,
         OpaqueFunction(function=launch_setup)
     ])
 

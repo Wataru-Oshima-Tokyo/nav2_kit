@@ -18,9 +18,13 @@ class MarkerLcalization(Node):
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
         self.static_broadcaster = tf2_ros.StaticTransformBroadcaster(self)
 
-        use_sim_time = self.get_parameter("use_sim_time")
-        if use_sim_time:
-             self.set_parameters([rclpy.parameter.Parameter("use_sim_time", rclpy.parameter.Parameter.Type.BOOL, True)])
+        use_sim_time_ = self.get_parameter("use_sim_time").get_parameter_value().bool_value 
+        self.get_logger().info(f"use_sim_time {use_sim_time_}")
+        if use_sim_time_:
+            self.get_logger().info('USE SIM TIME ')
+            self.set_parameters([rclpy.parameter.Parameter("use_sim_time", rclpy.parameter.Parameter.Type.BOOL, True)])
+        else:
+            self.get_logger().info('Do not USE SIM TIME ')
 
         # Subscribe to the marker detection topic
         self.marker_position_on_map = []

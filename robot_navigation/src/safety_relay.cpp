@@ -9,13 +9,29 @@ public:
     SafetyRelay()
         : Node("saftey_relay")
     {
-        cmd_vel_publisher_  = this->create_publisher<geometry_msgs::msg::Twist>("/diff_cont/cmd_vel_unstamped", 10);
+        // 1. Declare the parameter
+        this->declare_parameter<std::string>("cmd_vel_topic", "/diff_cont/cmd_vel_unstamped");
+        
+        // 2. Retrieve the parameter value
+        std::string cmd_vel_topic;
+        this->get_parameter("cmd_vel_topic", cmd_vel_topic);
+        
+        // 3. Initialize the publisher using the retrieved topic name
+        cmd_vel_publisher_  = this->create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic, 10);
+        
 
         scan_subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
             "/scan_for_move", rclcpp::SensorDataQoS(), std::bind(&SafetyRelay::scan_callback, this, std::placeholders::_1));
         
         cmd_vel_subscription_ = this->create_subscription<geometry_msgs::msg::Twist>(
             "/cmd_vel", rclcpp::SensorDataQoS(), std::bind(&SafetyRelay::cmd_vel_callback, this, std::placeholders::_1));
+        
+        this->get_parameter("use_sim_time", use_sim_time_);
+        if (use_sim_time_)
+        {
+            this->set_parameter(rclcpp::Parameter("use_sim_time", true));
+        }
+
     }
 
 private:
@@ -78,19 +94,21 @@ private:
             twist.linear.x = msg->linear.x; 
 
 
-
-        if (fabs(twist.angular.z) < 0.2 && fabs(twist.linear.x) <= 0.01){
-            if (!(fabs(twist.angular.z) < 0.1001 ))
-                twist.angular.z *= 15;
-            else
-                twist.angular.z = 0;
-        }else if (!warning){
-            twist.linear.x *=3;
-            twist.angular.z  *=5;
-        }else{
-            twist.linear.x *= 1.5;
-            twist.angular.z  *=3;
+        if (use_sim_time_){
+            if (fabs(twist.angular.z) < 0.2 && fabs(twist.linear.x) <= 0.01){
+                if (!(fabs(twist.angular.z) < 0.1001 ))
+                    twist.angular.z *= 15;
+                else
+                    twist.angular.z = 0;
+            }else if (!warning){
+                twist.linear.x *=3;
+                twist.angular.z  *=5;
+            }else{
+                twist.linear.x *= 1.5;
+                twist.angular.z  *=3;
+            }
         }
+
 
 
         cmd_vel_publisher_->publish(twist);
@@ -117,6 +135,7 @@ private:
     int index_max = (angle_max_deg + angle_range) / (angle_increment * 180 / M_PI);
     bool backup = false; 
     bool warning = false;
+    bool use_sim_time_ = false;
     
 };
 
