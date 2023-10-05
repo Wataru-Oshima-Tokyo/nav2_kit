@@ -1,20 +1,20 @@
 ---
 common:
-  default_window: goal_handler
+  default_window: lidar_util
 parameters:
   robot_name: scout_mini
   map_name: white
-  world_name: slope_environment
+  world_name: map_ts_1st_w_slope
   lidar_type: velodyne
-  map_filter_name: aksk_keepout
   use_simulator: True
-  headless: False
+  headless: True
   camera_name: front_camera
   rviz_name: limo_nav.rviz
+  min_height_for_move: -0.1
 windows:
   - name: lidar_util
     commands:
-      - ros2 launch robot_navigation robot_lidar_util.launch.py lidar_type:=${lidar_type}
+      - ros2 launch robot_navigation robot_lidar_util.launch.py lidar_type:=${lidar_type} min_height_for_move:=${min_height_for_move}
   - name: aksk_wolrd
     commands:
       - ros2 launch sim_worlds2 launch_world.launch.py use_simulator:=${use_simulator} headless:=${headless} world_name:=${world_name} rviz_file:=${rviz_name}
@@ -32,10 +32,6 @@ windows:
     commands:
       - sleep 1
       - ros2 launch lio_sam slam.launch.py
-  - name: lio_sam_nav
+  - name: show_rviz
     commands:
-      - sleep 5
-      - ros2 launch lio_sam lio_sam_nav.launch.py map_name:=aksk
-  - name: goal_handler
-    commands:
-      - ros2 launch goal_handler goal_handler.launch.py map_name:=aksk
+      - ros2 launch sim_worlds2 show_rviz.launch.py rviz_name:=${rviz_name}
