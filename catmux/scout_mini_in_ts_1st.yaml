@@ -8,7 +8,7 @@ parameters:
   lidar_type: velodyne
   map_filter_name: ts_1st_keepout
   use_simulator: True
-  headless: False
+  headless: True
   camera_name: front_camera
   rviz_name: limo_nav.rviz
   server_address: wataru-ubuntu
