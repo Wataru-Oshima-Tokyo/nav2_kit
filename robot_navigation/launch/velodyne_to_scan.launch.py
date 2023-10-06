@@ -58,5 +58,14 @@ def generate_launch_description():
             }],
             name='pointcloud_to_laserscan_for_move'
         ),
+        # Node(
+        #     package='pointcloud_to_laserscan', executable='laserscan_to_pointcloud_node',
+        #     remappings=[('scan_in', '/scan_for_move'),
+        #                 ('cloud', '/obstacle_points_raw')],
+        #     parameters=[{
+        #         'transform_tolerance': 0.01,
+        #     }],
+        #     name='scan_to_pc_for_object_detection'
+        # ),
 
     ])

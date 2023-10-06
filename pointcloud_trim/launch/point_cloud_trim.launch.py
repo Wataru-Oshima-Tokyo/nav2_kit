@@ -18,7 +18,9 @@ def generate_launch_description():
                 'angle_min': -60.0,
                 'angle_max': 60.0,
                 'range_min': 0.1,
-                'range_max': 5.0,
+                'range_max': 3.0,
+                'threshold': 0.01,
+                'costmap_interval_': 1000 #milliseconds
             }],
         )
     ])

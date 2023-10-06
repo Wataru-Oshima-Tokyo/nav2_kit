@@ -21,6 +21,8 @@ public:
         this->declare_parameter<double>("angle_max", 60.0);
         this->declare_parameter<double>("range_min", 0.1);
         this->declare_parameter<double>("range_max", 1.5);
+        this->declare_parameter<double>("threshold", 0.01);
+        this->declare_parameter<long int>("costmap_interval", 500);
         this->declare_parameter<std::string>("cloud_in", "points_raw");
         this->declare_parameter<std::string>("cloud_out", "trimmed_points");
 
@@ -33,6 +35,8 @@ public:
         this->get_parameter("range_max", max_length_);
         this->get_parameter("cloud_in", cloud_in);
         this->get_parameter("cloud_out", cloud_out);
+        this->get_parameter("threshold", threshold_);
+        this->get_parameter("costmap_interval", costmap_interval_);
         publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(cloud_out, 10);
         subscription_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
             cloud_in, 10, std::bind(&PointCloudTrimmer::callback, this, std::placeholders::_1));
@@ -41,7 +45,7 @@ public:
 
         // Setup the timer to call the service client every 2 seconds
         timer_ = this->create_wall_timer(
-            std::chrono::seconds(2),
+            std::chrono::milliseconds(costmap_interval_),
             std::bind(&PointCloudTrimmer::clearCostmapCallback, this));
     }
 
@@ -86,7 +90,7 @@ private:
             seg.setOptimizeCoefficients(true);
             seg.setModelType(pcl::SACMODEL_PLANE);
             seg.setMethodType(pcl::SAC_RANSAC);
-            seg.setDistanceThreshold(0.01);  // This threshold determines how close a point must be to the model in order to be considered an inlier.
+            seg.setDistanceThreshold(threshold_);  // This threshold determines how close a point must be to the model in order to be considered an inlier.
 
             seg.setInputCloud(trimmed_cloud);
             seg.segment(*inliers, *coefficients);
@@ -141,6 +145,8 @@ private:
         double max_angle_;
         double max_length_;
         double min_length_;
+        double threshold_;
+        long int costmap_interval_;
         std::string cloud_in;
         std::string cloud_out;
 };
