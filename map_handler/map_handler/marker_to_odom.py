@@ -32,7 +32,7 @@ class MarkerLcalization(Node):
         self.marker_position_on_map.append(None)
 
         self.timer1 = self.create_timer(1, self.lookup_transform)  # 0.01 seconds = 10ms = 100Hz
-        self.timer2 = self.create_timer(0.5, self.run)  # 0.01 seconds = 10ms = 100Hz
+        self.timer2 = self.create_timer(0.01, self.run)  # 0.01 seconds = 10ms = 100Hz
         self.transform_fetched = False
         self.initial_transform = False
 
@@ -57,6 +57,9 @@ class MarkerLcalization(Node):
             transform = self.tf_buffer.lookup_transform('base_link', '301', rclpy.time.Time())
             # Set the flag to True after successfully fetching the transform
             self.pose_array.append(transform)
+            if len(self.pose_array) < 50:
+                self.get_logger().info('The numbe of pose array is : %d' %len(self.pose_array) )
+
             if self.transform_fetched and not self.initial_transform and len(self.pose_array) > 50:
                 # robot_position = self.compute_robot_position_on_map(transform.transform)
                 self.publish_transform(transform.transform)

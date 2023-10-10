@@ -20,7 +20,7 @@ def generate_launch_description():
                 'range_min': 0.1,
                 'range_max': 3.0,
                 'threshold': 0.01,
-                'costmap_interval_': 1000 #milliseconds
+                'costmap_interval_': 2000 #milliseconds
             }],
         )
     ])

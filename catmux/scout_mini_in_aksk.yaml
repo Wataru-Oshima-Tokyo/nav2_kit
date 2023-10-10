@@ -16,9 +16,9 @@ windows:
   - name: lidar_util
     commands:
       - ros2 launch robot_navigation robot_lidar_util.launch.py lidar_type:=${lidar_type}
-  - name: trimmed_points
-    commands:
-      - ros2 launch pointcloud_trim point_cloud_trim.launch.py 
+  # - name: trimmed_points
+  #   commands:
+  #     - ros2 launch pointcloud_trim point_cloud_trim.launch.py 
   - name: aksk_wolrd
     commands:
       - ros2 launch sim_worlds2 launch_world.launch.py use_simulator:=${use_simulator} headless:=${headless} world_name:=${world_name} rviz_file:=${rviz_name}
@@ -46,7 +46,7 @@ windows:
   - name: show_rviz
     commands:
       - ros2 launch sim_worlds2 show_rviz.launch.py rviz_name:=${rviz_name}
-  - name: rcs_client
+  - name: rcs_clientsr  
     commands:
       - sleep 1
       - export RCS_SERVER_ADDRESS=${server_address}

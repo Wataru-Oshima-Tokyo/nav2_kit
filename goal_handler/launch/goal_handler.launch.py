@@ -17,6 +17,15 @@ def launch_setup(context, *args, **kwargs):
     map_name = LaunchConfiguration('map_name').perform(context)
     goal_name = map_name + "_goals.yaml"
 
+
+    path_handler =  Node(
+            package='path_handler',
+            executable='path_handler',
+            name='path_handler_node',
+            output='screen'
+        )
+
+
     goal_handler =  Node(
             package='goal_handler',
             executable='goal_saver_node',
@@ -37,7 +46,8 @@ def launch_setup(context, *args, **kwargs):
 
     return [
         goal_handler,
-        goal_publisher
+        goal_publisher,
+        path_handler
     ]
 def generate_launch_description():
 

@@ -15,6 +15,7 @@ import copy
 import os
 import datetime
 import random
+from nav_msgs.msg import Path
 
 class GoalActionServer(Node):
 
@@ -51,57 +52,20 @@ class GoalActionServer(Node):
             self.get_parameter('cmd_vel').get_parameter_value().string_value,
             self.cmd_vel_listener_callback,
             10)
+        
+
+        self.path_subscription = self.create_subscription(
+            Path,
+            '/replay_trajectory',
+            self.path_callback,
+            10)
+        
         self.cmd_vel_sub  # prevent unused variable warning
+        self.navigation_goal = None
+
 
     def cmd_vel_listener_callback(self, msg):
         self.current_speed = msg.linear.x
-
-    def doSpin(self, navigator, spin_dist):
-        navigator.cancelTask()
-        pose = None
-        while pose is None:
-            pose = self.get_pose()
-            time.sleep(0.1)
-        # Extract the current orientation in quaternion format
-        orientation_q = pose.transform.rotation
-
-        # Convert the quaternion to Euler angles
-        (roll, pitch, yaw) = self.euler_from_quaternion(orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w)
-
-        # Add the given rotation angle to the yaw
-        yaw += spin_dist
-
-        # Convert the updated Euler angles back to a quaternion
-        updated_orientation_q = self.quaternion_from_euler(roll, pitch, yaw)
-
-        # Set the updated orientation to the pose
-        pose.transform.rotation.x = updated_orientation_q[0]
-        pose.transform.rotation.y = updated_orientation_q[1]
-        pose.transform.rotation.z = updated_orientation_q[2]
-        pose.transform.rotation.w = updated_orientation_q[3]
-
-
-        spin_pose = PoseStamped()
-        spin_pose.header.frame_id = 'odom'
-        spin_pose.header.stamp = self.nav.get_clock().now().to_msg()
-        spin_pose.pose.position.x = pose.transform.translation.x
-        spin_pose.pose.position.y = pose.transform.translation.y
-        spin_pose.pose.position.z = pose.transform.translation.z
-
-        spin_pose.pose.orientation.x = pose.transform.rotation.x
-        spin_pose.pose.orientation.y = pose.transform.rotation.y
-        spin_pose.pose.orientation.z = pose.transform.rotation.z
-        spin_pose.pose.orientation.w = pose.transform.rotation.w
-
-
-        navigator.goToPose(spin_pose)
-        x = 0
-        while not navigator.isTaskComplete():
-            x += 1
-            feedback = self.nav.getFeedback()
-            if feedback and x % 2 == 0:
-                self.print_in_blue(f'Spin angle traveled')
-        self.print_in_pink('Spin is finished')
 
     def transform_to_dict(self, transform):
         return {
@@ -197,7 +161,6 @@ class GoalActionServer(Node):
         color_end = "\033[0m"
         self.get_logger().info(f"{orange_start}{msg}{color_end}")
 
-
     def print_in_blue(self, msg):
         blue_start = "\033[94m"
         color_end = "\033[0m"
@@ -258,16 +221,25 @@ class GoalActionServer(Node):
         self.print_in_red('Received cancel request')
         return CancelResponse.ACCEPT
 
-    async def goal_poses_execute_callback(self, goal_handle):
+
+    def path_callback(self, msg):
         self.nav = BasicNavigator()
-        with open(self.output_file, 'r') as file:
-            self.goals_data = yaml.safe_load(file)
-        self.get_logger().info('Executing goal...')
-        feedback_msg = TriggerGoalSequence.Feedback()
-        goal_poses = []
+        self.get_logger().info('Received a goal')
+        if self.navigation_goal:
+            self.get_logger().warn('Previous path not completed yet.')
+            return
+
+        if msg.poses:
+            self.get_logger().info('Publish the path')
+            self.nav.cancelTask()
+            self.nav.followPath(msg)
+            inital_pose = self.get_initial_pose()
+            # self.path_checker(msg.poses, inital_pose, 1)
+        else:
+            self.get_logger().warn('Path is empty')
+
+    def get_initial_pose(self):
         initial_position = None
-        loop = goal_handle.request.loop
-        self.print_in_blue("The loop is " + '{:d}'.format(loop))
         while initial_position is None:
             initial_position = self.get_pose()
             time.sleep(0.1)
@@ -283,10 +255,178 @@ class GoalActionServer(Node):
         initial_pose.pose.orientation.z = initial_position.transform.rotation.z
         initial_pose.pose.orientation.w = initial_position.transform.rotation.w
         self.writeTheResult(initial_position, 'initial_pose')
+        return initial_pose
+
+    def path_checker(self, goal_poses, initial_pose, current_attempt):
+        i = 0
+        nav_start = self.nav.get_clock().now()
+        absolute_nav_time = self.nav.get_clock().now()
+        nav_result = True
+        current_pose_id = 0
+        absolute_marker_id = 1
+        check_goal_start = False
+        reached = False
+        # previous_speed = 0
+        time_within_threshold = None 
+        # self.nav.clearAllCostmaps()
+        for j in range(3):
+            if len(goal_poses) != 0 and  j >0 and not reached:
+                self.print_in_blue('-------------------------------------------------')
+                self.print_in_yellow('STILL has some goals so restart soon!')
+                self.print_in_blue('-------------------------------------------------')
+                remaining_goals = goal_poses[absolute_marker_id-1:] 
+                self.nav.cancelTask()
+                self.nav.goThroughPoses(remaining_goals)
+                nav_start = self.nav.get_clock().now()
+                check_goal_start = False
+                current_pose_id = len(goal_poses) - len(remaining_goals)
+
+            while not self.nav.isTaskComplete():
+                feedback = self.nav.getFeedback()
+                target_pose_id = len(goal_poses) - feedback.number_of_poses_remaining
+
+                if current_pose_id != target_pose_id and not reached:
+                    self.print_in_pink('goal id : ' + '{:d}'.format(absolute_marker_id) + ' is reached!')
+                    current_pose_id = target_pose_id
+                    nav_start = self.nav.get_clock().now()
+                    time_within_threshold = None 
+                    absolute_marker_id +=1
+                
+                # if previous_speed != self.current_speed:
+                #     if self.current_speed == - 0.2:
+                #         self.print_in_yellow('Object detection mode: Reset costmap')
+                #         self.nav.clearLocalCostmap()
+                        
+                # previous_speed = self.current_speed 
+
+                now = self.nav.get_clock().now()
+                time_difference_secs = int((now.nanoseconds - nav_start.nanoseconds) / 1e9)
+                abs_nav_time = int((now.nanoseconds - absolute_nav_time.nanoseconds) / 1e9)
+                dis_to_waypoint = self.distance_to_next(goal_poses[target_pose_id])
+                if feedback and i % 5 == 0:
+                    self.print_in_blue('-------------------------------------------------')
+                    self.print_in_orange('Current attempt is ' + '{:d}'.format(
+                    current_attempt) + " th")
+                    self.print_in_green('Target pose id: ' + '{:d}'.format(
+                    absolute_marker_id))
+                    self.get_logger().info('Distance remaining to the end goal: ' + '{:.2f}'.format(
+                    feedback.distance_remaining) + ' meters.')
+                    self.print_in_purple('Distance remaining to the next waypoint: ' + '{:.2f}'.format(
+                    dis_to_waypoint) + ' meters.')
+                    self.get_logger().info('Poses remaining: ' + '{:d}'.format(
+                    feedback.number_of_poses_remaining) + ' poses')
+                    self.get_logger().info('Time elapsed from the previous goal: ' + '{:d}'.format(
+                    time_difference_secs) + ' secs')
+                    self.get_logger().info('Time elapsed: ' + '{:d}'.format(
+                    abs_nav_time) + ' secs')
+                    self.print_in_blue('-------------------------------------------------')
+
+                        
+                """
+                here I would like to check if the remaining distance is less than one 
+                and it takes 10 seconds to reach the goal then erase(skip) the goal and go to the next pose.
+
+                """
+                if dis_to_waypoint < 2:  # If distance is less than one meter
+                    check_goal_start = True
+                elif dis_to_waypoint > 5:
+                    check_goal_start = False
+                
+                # Check the remaining distance
+                if check_goal_start and not reached:
+                    if time_within_threshold is None:  # If we haven't already started the timer
+                        time_within_threshold = self.nav.get_clock().now()  # Start the timer
+                        self.print_in_brown("goal reach time now starts ticking!!")
+                    else:
+                        elapsed_time = int((now.nanoseconds - time_within_threshold.nanoseconds) / 1e9)
+                        if elapsed_time > 3:  # If more than 10 seconds have passed
+                            self.print_in_yellow("Skipping current goal due to being within distance threshold for more than 3 seconds.")
+                            time_within_threshold = None  # Reset the timer
+                            
+                            # Skip to the next pose
+                            remaining_goals = goal_poses[absolute_marker_id:]  # Slice the list to start from the next pose
+                            if len(remaining_goals) > 0:  # If there are remaining goals
+                                self.nav.cancelTask()
+                                self.nav.goThroughPoses(remaining_goals)  # Send the robot to the next set of poses
+                                nav_start = self.nav.get_clock().now()
+                                current_pose_id = 0
+                                check_goal_start = False
+                                # absolute_marker_id +=1
+                            else:
+                                self.print_in_blue("No more goals left!")
+                                reached = True
+                                goal_poses =[]
+                                self.nav.cancelTask()
+                                
+
+
+                else:
+                    time_within_threshold = None  # Reset the timer if robot moves outside the threshold
+
+                
+                # Some navigation timeout to demo cancellation
+                if time_difference_secs > 300.0:
+                    self.print_in_red('MOVE BASE Goal canceled due to timeout')
+                    self.nav.cancelTask()
+                    break
+
+                time.sleep(1)
+                i+=1
+
+            nav_result = self.nav.getResult()
+            if reached or nav_result == TaskResult.SUCCEEDED:
+                self.print_in_pink('Now going back to the initial position')
+                initial_pose.header.stamp = self.nav.get_clock().now().to_msg()
+                self.nav.goToPose(initial_pose)
+                nav_start = self.nav.get_clock().now()
+                check_goal_start = False
+
+                while not self.nav.isTaskComplete():
+                    time.sleep(1)
+
+
+            nav_result = self.nav.getResult()
+            if nav_result == TaskResult.SUCCEEDED:
+                self.print_in_green('Goal was succeeded!')
+                # TODO: here I would like to get the the current pose and write it to a yaml file
+                # Fetch the current pose
+                current_pose = None
+                while current_pose is None:
+                    current_pose = self.get_pose()
+                    time.sleep(0.1)
+                if current_pose:
+                    self.writeTheResult(current_pose, 'current_pose')
+                break
+            elif nav_result == TaskResult.CANCELED:
+                self.print_in_yellow('Goal was canceled!')
+                break
+                # goal_handle.canceled()
+            elif nav_result == TaskResult.FAILED:
+                self.print_in_red('Goal failed!')
+                continue
+                # goal_handle.abort()
+            else:
+                self.print_in_red('Goal has an invalid return status!')  
+                loop = False
+                break  
+                # goal_handle.canceled()  
+                # Here, you would wait for feedback that the robot has reached its destination.
+                # For simplicity, this is omitted, but you'd likely set up a subscriber or some other mechanism.
+        return nav_result
+
+    async def goal_poses_execute_callback(self, goal_handle):
+        self.nav = BasicNavigator()
+        with open(self.output_file, 'r') as file:
+            self.goals_data = yaml.safe_load(file)
+        self.get_logger().info('Executing goal...')
+        feedback_msg = TriggerGoalSequence.Feedback()
+        goal_poses = []
+        loop = goal_handle.request.loop
+        self.print_in_blue("The loop is " + '{:d}'.format(loop))
+        initial_pose = self.get_initial_pose()
         fail_counter = 0
         current_attempt = 1
         while True:
-
             for idx, goal_data in enumerate(self.goals_data['goals']):
                 goal_pose = PoseStamped()
                 goal_pose.header.frame_id = 'map'
@@ -300,166 +440,13 @@ class GoalActionServer(Node):
                 goal_pose.pose.orientation.z = goal_data['orientation']['z']
                 goal_pose.pose.orientation.w = goal_data['orientation']['w']
                 goal_poses.append(goal_pose)
-                # self.publisher_.publish(goal_pose)
-
-            
+                # self.publisher_.publish(goal_pose)            
             # nav_result = self.nav.waitUntilNav2Active(localizer="bt_navigator")
+            self.nav.cancelTask()
             self.nav.goThroughPoses(goal_poses)
-            i = 0
-            nav_start = self.nav.get_clock().now()
-            absolute_nav_time = self.nav.get_clock().now()
-            nav_result = True
-            current_pose_id = 0
-            absolute_marker_id = 1
-            check_goal_start = False
-            reached = False
-            time_within_threshold = None 
-            previous_speed = 0
-            self.nav.clearLocalCostmap()
-            for j in range(3):
-                if len(goal_poses) != 0 and  j >0 and not reached:
-                    self.print_in_blue('-------------------------------------------------')
-                    self.print_in_yellow('STILL has some goals so restart soon!')
-                    self.print_in_blue('-------------------------------------------------')
-                    remaining_goals = goal_poses[absolute_marker_id-1:] 
-                    self.nav.cancelTask()
-                    self.nav.goThroughPoses(remaining_goals)
-                    nav_start = self.nav.get_clock().now()
-                    check_goal_start = False
-                    current_pose_id = len(goal_poses) - len(remaining_goals)
-                    fail_counter +=1
-
-                while not self.nav.isTaskComplete():
-                    feedback = self.nav.getFeedback()
-                    target_pose_id = len(goal_poses) - feedback.number_of_poses_remaining
-
-                    if current_pose_id != target_pose_id and not reached:
-                        self.print_in_pink('goal id : ' + '{:d}'.format(absolute_marker_id) + ' is reached!')
-                        current_pose_id = target_pose_id
-                        nav_start = self.nav.get_clock().now()
-                        time_within_threshold = None 
-                        absolute_marker_id +=1
-                    
-                    # if previous_speed != self.current_speed:
-                    #     if self.current_speed == - 0.2:
-                    #         self.print_in_yellow('Object detection mode: Reset costmap')
-                    #         self.nav.clearLocalCostmap()
-                            
-                    previous_speed = self.current_speed 
-
-                    now = self.nav.get_clock().now()
-                    time_difference_secs = int((now.nanoseconds - nav_start.nanoseconds) / 1e9)
-                    abs_nav_time = int((now.nanoseconds - absolute_nav_time.nanoseconds) / 1e9)
-                    dis_to_waypoint = self.distance_to_next(goal_poses[target_pose_id])
-                    if feedback and i % 5 == 0:
-                        self.print_in_blue('-------------------------------------------------')
-                        self.print_in_orange('Current attempt is ' + '{:d}'.format(
-                        current_attempt) + " th")
-                        self.print_in_green('Target pose id: ' + '{:d}'.format(
-                        absolute_marker_id))
-                        self.get_logger().info('Distance remaining to the end goal: ' + '{:.2f}'.format(
-                        feedback.distance_remaining) + ' meters.')
-                        self.print_in_purple('Distance remaining to the next waypoint: ' + '{:.2f}'.format(
-                        dis_to_waypoint) + ' meters.')
-                        self.get_logger().info('Poses remaining: ' + '{:d}'.format(
-                        feedback.number_of_poses_remaining) + ' poses')
-                        self.get_logger().info('Time elapsed from the previous goal: ' + '{:d}'.format(
-                        time_difference_secs) + ' secs')
-                        self.get_logger().info('Time elapsed: ' + '{:d}'.format(
-                        abs_nav_time) + ' secs')
-                        self.print_in_blue('-------------------------------------------------')
-
-                            
-                    """
-                    here I would like to check if the remaining distance is less than one 
-                    and it takes 10 seconds to reach the goal then erase(skip) the goal and go to the next pose.
-
-                    """
-                    if dis_to_waypoint < 2:  # If distance is less than one meter
-                        check_goal_start = True
-                    elif dis_to_waypoint > 5:
-                        check_goal_start = False
-                    
-                    # Check the remaining distance
-                    if check_goal_start and not reached:
-                        if time_within_threshold is None:  # If we haven't already started the timer
-                            time_within_threshold = self.nav.get_clock().now()  # Start the timer
-                            self.print_in_brown("goal reach time now starts ticking!!")
-                        else:
-                            elapsed_time = int((now.nanoseconds - time_within_threshold.nanoseconds) / 1e9)
-                            if elapsed_time > 3:  # If more than 10 seconds have passed
-                                self.print_in_yellow("Skipping current goal due to being within distance threshold for more than 3 seconds.")
-                                time_within_threshold = None  # Reset the timer
-                                
-                                # Skip to the next pose
-                                remaining_goals = goal_poses[absolute_marker_id:]  # Slice the list to start from the next pose
-                                if len(remaining_goals) > 0:  # If there are remaining goals
-                                    self.nav.cancelTask()
-                                    self.nav.goThroughPoses(remaining_goals)  # Send the robot to the next set of poses
-                                    nav_start = self.nav.get_clock().now()
-                                    current_pose_id = 0
-                                    check_goal_start = False
-                                    # absolute_marker_id +=1
-                                else:
-                                    self.print_in_blue("No more goals left!")
-                                    reached = True
-                                    goal_poses =[]
-                                    self.nav.cancelTask()
-                                    
-
-
-                    else:
-                        time_within_threshold = None  # Reset the timer if robot moves outside the threshold
-
-                    
-                    # Some navigation timeout to demo cancellation
-                    if time_difference_secs > 300.0:
-                        self.print_in_red('MOVE BASE Goal canceled due to timeout')
-                        self.nav.cancelTask()
-                        break
-
-                    time.sleep(1)
-                    i+=1
-
-                nav_result = self.nav.getResult()
-                if reached or nav_result == TaskResult.SUCCEEDED:
-                    self.print_in_pink('Now going back to the initial position')
-                    initial_pose.header.stamp = self.nav.get_clock().now().to_msg()
-                    self.nav.goToPose(initial_pose)
-                    nav_start = self.nav.get_clock().now()
-                    check_goal_start = False
-
-                    while not self.nav.isTaskComplete():
-                        time.sleep(1)
-
-
-                nav_result = self.nav.getResult()
-                if nav_result == TaskResult.SUCCEEDED:
-                    self.print_in_green('Goal was succeeded!')
-                    # TODO: here I would like to get the the current pose and write it to a yaml file
-                    # Fetch the current pose
-                    current_pose = None
-                    while current_pose is None:
-                        current_pose = self.get_pose()
-                        time.sleep(0.1)
-                    if current_pose:
-                        self.writeTheResult(current_pose, 'current_pose')
-                    break
-                elif nav_result == TaskResult.CANCELED:
-                    self.print_in_yellow('Goal was canceled!')
-                    break
-                    # goal_handle.canceled()
-                elif nav_result == TaskResult.FAILED:
-                    self.print_in_red('Goal failed!')
-                    continue
-                    # goal_handle.abort()
-                else:
-                    self.print_in_red('Goal has an invalid return status!')  
-                    loop = False
-                    break  
-                    # goal_handle.canceled()  
-                    # Here, you would wait for feedback that the robot has reached its destination.
-                    # For simplicity, this is omitted, but you'd likely set up a subscriber or some other mechanism.
+            nav_result = self.path_checker(goal_poses, initial_pose, current_attempt)
+            if nav_result != TaskResult.SUCCEEDED:
+                fail_counter +=1
             if loop == False or fail_counter > 100:
                 break     
             else:
