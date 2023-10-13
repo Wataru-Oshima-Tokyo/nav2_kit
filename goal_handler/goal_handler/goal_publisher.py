@@ -62,6 +62,8 @@ class GoalActionServer(Node):
         
         self.cmd_vel_sub  # prevent unused variable warning
         self.navigation_goal = None
+        self.follow_path_nav = BasicNavigator()
+
 
 
     def cmd_vel_listener_callback(self, msg):
@@ -223,17 +225,16 @@ class GoalActionServer(Node):
 
 
     def path_callback(self, msg):
-        self.nav = BasicNavigator()
         self.get_logger().info('Received a goal')
-        if self.navigation_goal:
-            self.get_logger().warn('Previous path not completed yet.')
-            return
+        while not self.follow_path_nav.isTaskComplete():
+            self.print_in_orange('Waiting for the previous goal is finished')
+            time.sleep(1)
 
         if msg.poses:
             self.get_logger().info('Publish the path')
-            self.nav.cancelTask()
-            self.nav.followPath(msg)
-            inital_pose = self.get_initial_pose()
+            # self.nav.cancelTask()
+            self.follow_path_nav.followPath(msg)
+            # inital_pose = self.get_initial_pose()
             # self.path_checker(msg.poses, inital_pose, 1)
         else:
             self.get_logger().warn('Path is empty')

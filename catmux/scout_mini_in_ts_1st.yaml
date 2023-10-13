@@ -1,6 +1,6 @@
 ---
 common:
-  default_window: goal_handler
+  default_window: rcs_client
 parameters:
   robot_name: scout_mini
   map_name: ts_1st
@@ -12,6 +12,7 @@ parameters:
   camera_name: front_camera
   rviz_name: limo_nav.rviz
   server_address: wataru-orin
+  cmd_vel_topic: /diff_cont/cmd_vel_unstamped
 windows:
   - name: lidar_util
     commands:
@@ -46,10 +47,10 @@ windows:
   # - name: show_rviz
   #   commands:
   #     - ros2 launch sim_worlds2 show_rviz.launch.py rviz_name:=${rviz_name}
-  - name: rcs_clientsr  
+  - name: rcs_client  
     commands:
       - sleep 1
       - export RCS_SERVER_ADDRESS=${server_address}
       - export ROBOT_NAME=${robot_name}
       - export MAP_ID=${map_name}
-      - ros2 launch rcs_client lio_sam_rcs_client.launch.py camera_name:=${camera_name}
+      - ros2 launch rcs_client lio_sam_rcs_client.launch.py camera_name:=${camera_name} cmd_vel_topic:=${cmd_vel_topic}
