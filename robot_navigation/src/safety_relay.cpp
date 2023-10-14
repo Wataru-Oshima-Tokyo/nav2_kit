@@ -11,10 +11,14 @@ public:
     {
         // 1. Declare the parameter
         this->declare_parameter<std::string>("cmd_vel_topic", "/diff_cont/cmd_vel_unstamped");
+        this->declare_parameter<int>("linear_coefficient", 3);
+        this->declare_parameter<int>("angular_coefficient", 5);
         
         // 2. Retrieve the parameter value
         std::string cmd_vel_topic;
         this->get_parameter("cmd_vel_topic", cmd_vel_topic);
+        this->get_parameter("linear_coefficient", linear_coefficient);
+        this->get_parameter("angular_coefficient", angular_coefficient);
         
         // 3. Initialize the publisher using the retrieved topic name
         cmd_vel_publisher_  = this->create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic, 10);
@@ -95,17 +99,20 @@ private:
 
 
         if (use_sim_time_){
-            if (fabs(twist.angular.z) < 0.2 && fabs(twist.linear.x) <= 0.01){
-                if (!(fabs(twist.angular.z) < 0.1001 ))
-                    twist.angular.z *= 15;
-                else
+            if (fabs(msg->angular.z) < 0.2 && fabs(msg->linear.x) <= 0.01){
+                if (!(fabs(msg->angular.z) < 0.1001 )){
+                    twist.angular.z *= angular_coefficient*3;
+                }
+                else{
+                    twist.linear.x = 0;
                     twist.angular.z = 0;
-            }else if (!warning){
-                twist.linear.x *=3;
-                twist.angular.z  *=5;
+                }
+            }else if (!warning && fabs(msg->linear.x) >= 0.1){
+                twist.linear.x *= linear_coefficient;
+                twist.angular.z  *= angular_coefficient;
             }else{
-                twist.linear.x *= 1.5;
-                twist.angular.z  *=3;
+                twist.linear.x *= (linear_coefficient/2) < 1 ? 1 : linear_coefficient/2;
+                twist.angular.z *= (angular_coefficient/2) < 1 ? 1 : angular_coefficient/2;
             }
         }else{
             if (fabs(twist.angular.z) < 0.2 && fabs(twist.linear.x) <= 0.01){
@@ -130,6 +137,7 @@ private:
     int angle_max_deg = 30;   // maximum angle in degrees
     double angle_increment = 0.0087;
     int angle_range = 60;
+    int linear_coefficient, angular_coefficient;
     int angle_min_slowdown_deg = angle_min_deg/3;  // minimum angle for slowdown in degrees
     int angle_max_slowdown_deg = angle_max_deg/3;   // maximum angle for slowdown in degrees
     // calculate the indices in the ranges list that correspond to the slowdown angles
