@@ -12,6 +12,7 @@ parameters:
   camera_name: front_camera
   rviz_name: limo_nav.rviz
   server_address: wataru-ubuntu
+  cmd_vel_toic: /diff_cont/cmd_vel_unstamped
 windows:
   - name: lidar_util
     commands:
@@ -52,4 +53,4 @@ windows:
       - export RCS_SERVER_ADDRESS=${server_address}
       - export ROBOT_NAME=${robot_name}
       - export MAP_ID=${map_name}
-      - ros2 launch rcs_client lio_sam_rcs_client.launch.py camera_name:=${camera_name}
+      - ros2 launch rcs_client lio_sam_rcs_client.launch.py camera_name:=${camera_name} cmd_vel_topic:=${cmd_vel_topic}
