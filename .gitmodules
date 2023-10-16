@@ -15,3 +15,6 @@
 [submodule "techshare_ros_pkg2"]
 	path = techshare_ros_pkg2
 	url = https://github.com/TechShare-inc/techshare_ros_pkg2.git
+[submodule "ros_server_client"]
+	path = ros_server_client
+	url = https://github.com/TechShare-inc/ros_server_client.git
