@@ -22,6 +22,7 @@ class InitialPoseSetter(Node):
         qos_profile = QoSProfile(depth=10)
         self.srv = self.create_service(Trigger, 'kill_marker_tf', self.kill_nodes_callback)
         self.init_pose_sub = self.create_subscription(PoseStamped, "init_pose_set", self.init_pose_callback, qos_profile)
+        self.color_print.print_in_purple("initial pose setter started!")
 
     def killNodes(self):
         try:
