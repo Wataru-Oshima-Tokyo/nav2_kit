@@ -75,8 +75,7 @@ def launch_setup(context, *args, **kwargs):
         package='map_handler',
         executable='init_pose_setter',
         name='init_pose_setter_node',
-        respawn=False,
-        output='screen',
+        output='screen'
     )
     return [
         static_map_to_marker_node,

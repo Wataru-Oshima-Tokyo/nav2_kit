@@ -14,33 +14,35 @@ class NodeMonitor(Node):
         self.timer = self.create_timer(2.0, self.check_node_status)  # Check node status every 2 seconds
         self.killall_service = self.create_service(Trigger, 'killall', self.handle_killall)  # Create the killall service
         self.start_all_service = self.create_service(Trigger, 'restart', self.handle_startall)  # Create the restart service
-        self.work_space = os.getenv("WORK_SPACE")
-        self.catmux_cpmmand = os.getenv("CATMUX_COMMAND")
+        self.catmux_dict = os.getenv("WORK_SPACE")
+        self.catmux_command = os.getenv("CATMUX_COMMAND")
         self.declare_parameter('docker', False)
+        self.declare_parameter('work_space', None)
+        self.declare_parameter('catmux_command', "diffbot_in_ts_1st")
         self.docker = self.get_parameter("docker").get_parameter_value().bool_value 
         self.get_logger().info(f"docker {self.docker}")
-        # if use_sim_time_:
-        #     self.get_logger().info('USE SIM TIME ')
-        #     self.set_parameters([rclpy.parameter.Parameter("use_sim_time", rclpy.parameter.Parameter.Type.BOOL, True)])
-        # else:
-        #     self.get_logger().info('Do not USE SIM TIME ')
-
+        if self.catmux_dict is None:
+            self.catmux_dict = self.get_parameter('work_space').value
+        if self.catmux_command is None:
+            self.catmux_command = self.get_parameter('catmux_command').value
         self.color_print = COLOR_PRINT(self)
+        self.color_print.print_in_blue(f"work_space {self.catmux_dict}")
+        self.color_print.print_in_blue(f"catmux_command {self.catmux_command}")
+
         valid_dict = True
-        if self.work_space is None:
+        if self.catmux_dict is None:
             self.color_print.print_in_red('Please specify the working space as WORK_SPACE') 
             valid_dict = False
-        elif not (os.path.exists(self.work_space) and os.path.isdir(self.work_space)):
+        elif not (os.path.exists(self.catmux_dict) and os.path.isdir(self.catmux_dict)):
             self.color_print.print_in_red('Please put a valid working space') 
             valid_dict = False
         if not valid_dict:
             self.destroy_node()
             sys.exit()
-        self.catmux_dict = self.work_space +"/src/nav2_kit/catmux/"
+        # self.catmux_dict = self.catmux_dict +"/src/nav2_kit/catmux/"
         if os.path.exists(self.catmux_dict) and os.path.isdir(self.catmux_dict):
-            self.color_print.print_in_green("YOu CAN HANDLE CATMUX COMMAND")
-        else:
-            self.color_print.print_in_yellow("CANNOT FIND THE CATMUX DICT. Please make sure if nav2_kit is directory under <your workspace>/src")
+            self.color_print.print_in_green("YOU CAN HANDLE CATMUX COMMAND")
+        self.started = False
 
 
 
@@ -74,20 +76,22 @@ class NodeMonitor(Node):
             - directory (str): The directory to navigate to.
             - session_name (str): The name for the catmux session.
             """
-            if self.docker:
-                command = f'gnome-terminal -- bash -c "docker exec -it humble /bin/bash; cd {self.catmux_dict} && catmux_create_session {self.catmux_cpmmand}.yaml;"'
-            else:
-                command = f'gnome-terminal -- bash -c "cd {self.catmux_dict} && catmux_create_session {self.catmux_cpmmand}.yaml;"'
+            # if self.docker:
+            #     command = f"gnome-terminal -- bash -c \"docker exec -it humble /bin/bash -c 'cd {self.catmux_dict} && catmux_create_session {self.catmux_command}.yaml;'\""
+            # else:
+            command = f'gnome-terminal -- bash -c "cd {self.catmux_dict} && catmux_create_session {self.catmux_command}.yaml;"'
             subprocess.run(command, shell=True)
 
 
     def handle_startall(self, request, response):
         try:
-            self.killAll()
-            time.sleep(2)
+            if self.started:
+                self.killAll()
+                time.sleep(2)
             self.startAll()
             response.success = True
             self.get_logger().info("Start All the nodes")
+            self.started = True
         except subprocess.CalledProcessError:
             response.success = False
             response.message = "Failed to kill all ROS2 nodes."
@@ -95,14 +99,16 @@ class NodeMonitor(Node):
 
     def killAll(self):
         try:
-            cmd = "ps aux | grep ros |grep -v grep | grep -v process_checker |grep -v rcs_client_node | awk '{ print \"kill -9\", $2 }' | sh"
+            self.color_print.print_in_brown("First kill")
+            cmd = "ps aux | grep ros |grep -v grep | grep -v process_handler |grep -v rcs_client_node | awk '{ print \"kill -9\", $2 }' | sh"
             subprocess.run(cmd, shell=True, check=True)
-            cmd = "ps aux | grep catmux | grep -v grep | awk '{ print \"kill -9\", $2 }' | sh"
+            self.color_print.print_in_brown("Second kill")
+            cmd = "ps aux | grep catmux | grep -v grep | grep -v process_handler | awk '{ print \"kill -9\", $2 }' | sh"
             time.sleep(2)
             subprocess.run(cmd, shell=True, check=True)
-            self.get_logger().info("All nodes except for 'process_checker' and 'rcs client' have been killed.")
+            self.get_logger().info("All nodes except for 'process_handler' and 'rcs client' have been killed.")
         except subprocess.CalledProcessError:
-            response.success = False
+            self.color_print.print_in_yellow("failed to execute it")
             
 
     def handle_killall(self, request, response):
