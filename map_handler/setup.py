@@ -1,11 +1,11 @@
 from setuptools import find_packages, setup
 import glob
 package_name = 'map_handler'
-
+library = 'map_handler/library'
 setup(
     name=package_name,
     version='0.0.0',
-    packages=find_packages(exclude=['test']),
+    packages=[package_name, library],
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -24,6 +24,7 @@ setup(
         'console_scripts': [
              'map_position_change_node = map_handler.load_map:main',
              'marker_localization = map_handler.marker_to_odom:main',
+             'init_pose_setter = map_handler.initial_pose_setter:main',
         ],
     },
 )

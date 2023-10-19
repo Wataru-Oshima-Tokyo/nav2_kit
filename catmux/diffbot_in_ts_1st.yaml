@@ -49,8 +49,8 @@ windows:
   #     - ros2 launch sim_worlds2 show_rviz.launch.py rviz_name:=${rviz_name}
   - name: rcs_client  
     commands:
-      - sleep 1
-      - export RCS_SERVER_ADDRESS=${server_address}
-      - export ROBOT_NAME=${robot_name}
-      - export MAP_ID=${map_name}
-      - ros2 launch rcs_client lio_sam_rcs_client.launch.py camera_name:=${camera_name} cmd_vel_topic:=${cmd_vel_topic}
+      # - sleep 1
+      # - export RCS_SERVER_ADDRESS=${server_address}
+      # - export ROBOT_NAME=${robot_name}
+      # - export MAP_ID=${map_name}
+      - ros2 launch rcs_client lio_sam_rcs_client.launch.py cmd_vel_topic:=${cmd_vel_topic}

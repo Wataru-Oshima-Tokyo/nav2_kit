@@ -12,6 +12,7 @@
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/inference/Symbol.h>
+#include <std_srvs/srv/trigger.hpp>
 
 #include <gtsam/nonlinear/ISAM2.h>
 #include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
@@ -23,6 +24,9 @@ using gtsam::symbol_shorthand::B; // Bias  (ax,ay,az,gx,gy,gz)
 class TransformFusion : public ParamServer
 {
 public:
+
+    
+
     std::mutex mtx;
 
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subImuOdometry;
@@ -45,7 +49,7 @@ public:
 
     double lidarOdomTime = -1;
     deque<nav_msgs::msg::Odometry> imuOdomQueue;
-
+    
     TransformFusion(const rclcpp::NodeOptions & options) : ParamServer("lio_sam_transformFusion", options)
     {
         tfBuffer = std::make_shared<tf2_ros::Buffer>(get_clock());
@@ -74,6 +78,9 @@ public:
         pubImuPath = create_publisher<nav_msgs::msg::Path>("lio_sam/imu/path", qos);
 
         tfBroadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(this);
+
+        
+
     }
 
     Eigen::Isometry3d odom2affine(nav_msgs::msg::Odometry odom)
@@ -174,7 +181,8 @@ class IMUPreintegration : public ParamServer
 public:
 
     std::mutex mtx;
-
+    //original 
+    rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr restart_client_;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subImu;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subOdometry;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pubImuOdometry;
@@ -260,6 +268,10 @@ public:
         
         imuIntegratorImu_ = new gtsam::PreintegratedImuMeasurements(p, prior_imu_bias); // setting up the IMU integration for IMU message thread
         imuIntegratorOpt_ = new gtsam::PreintegratedImuMeasurements(p, prior_imu_bias); // setting up the IMU integration for optimization        
+        
+        //original
+        restart_client_ = this->create_client<std_srvs::srv::Trigger>("restart");
+    
     }
 
     void resetOptimization()
@@ -432,7 +444,9 @@ public:
         // check optimization
         if (failureDetection(prevVel_, prevBias_))
         {
-            resetParams();
+            // resetParams();
+            auto restart_request = std::make_shared<std_srvs::srv::Trigger::Request>();
+            restart_client_->async_send_request(restart_request);
             return;
         }
 

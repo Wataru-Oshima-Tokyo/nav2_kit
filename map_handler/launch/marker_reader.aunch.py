@@ -57,7 +57,7 @@ def launch_setup(context, *args, **kwargs):
         package='map_handler',
         executable='marker_localization',
         name='marker_localization_node',
-        respawn=True,
+        respawn=False,
         output='screen',
         parameters=[{'use_sim_time': use_sim_time}]
     )
