@@ -71,11 +71,18 @@ def launch_setup(context, *args, **kwargs):
             ],
             parameters=[tag_param_file]
         )
-    
+    initial_pose_setter_node = Node(
+        package='map_handler',
+        executable='init_pose_setter',
+        name='init_pose_setter_node',
+        respawn=False,
+        output='screen',
+    )
     return [
         static_map_to_marker_node,
         dynamic_marker_to_odom_node,
-        apriltag_node
+        apriltag_node,
+        initial_pose_setter_node
     ]
 
 def generate_launch_description():
