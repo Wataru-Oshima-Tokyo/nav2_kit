@@ -2,8 +2,8 @@ RCS_SERVER_ADDRESS=wataru-orin
 ROBOT_NAME=scout_mini_actual
 MAP_ID=ts_1st
 WORK_SPACE=$HOME/humble_ws
-CATMUX_SPACE=/humble_ws/src/nav2_kit/catmux/
- CATMUX_COMMAND="diffbot_in_ts_1st"
+CATMUX_SPACE=$HOME/humble_ws/src/nav2_kit/catmux/
+CATMUX_COMMAND="diffbot_in_ts_1st"
 docker=false
 
 # Launch the rcs_client in one gnome-terminal
@@ -18,9 +18,8 @@ gnome-terminal -- bash -c "    ros2 run rcs_client rcs_client_node --ros-args \
 sleep 2
 
 # Launch the process_checker in a different gnome-terminal
-gnome-terminal -- bash -c "    
-        ros2 run process_checker process_handler --ros-args \
+gnome-terminal -- bash -c "     ros2 run process_checker process_handler --ros-args \
         --param work_space:=$CATMUX_SPACE \
         --param catmux_command:=$CATMUX_COMMAND \
-        --param docker:=$docker';"
+        --param docker:=$docker"
 
