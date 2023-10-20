@@ -50,7 +50,17 @@ class NodeMonitor(Node):
     def discover_nodes(self):
         node_names_and_namespaces = self.get_node_names_and_namespaces()
         self.get_logger().info('Discovered nodes: %s' % node_names_and_namespaces)
+        
+        if self.started and not self.is_all_nodes_ros_alive(node_names_and_namespaces):
+            self.startAction()  
+        
         return node_names_and_namespaces
+
+    def is_all_nodes_ros_alive(self, nodes):
+        for node_name, namespace in nodes:
+            if not 'witmotion' in node_name and 'lio_sam_imuPreintegration' in node_name:  # Adjust this check as per the exact name of your node
+                return False
+        return True
 
 
 
@@ -82,13 +92,15 @@ class NodeMonitor(Node):
             command = f'gnome-terminal -- bash -c "cd {self.catmux_dict} && catmux_create_session {self.catmux_command}.yaml;"'
             subprocess.run(command, shell=True)
 
+    def startAction(self):
+        if self.started:
+            self.killAll()
+            time.sleep(2)
+        self.startAll()
 
     def handle_startall(self, request, response):
         try:
-            if self.started:
-                self.killAll()
-                time.sleep(2)
-            self.startAll()
+            self.startAction()
             response.success = True
             self.get_logger().info("Start All the nodes")
             self.started = True
@@ -107,6 +119,7 @@ class NodeMonitor(Node):
             time.sleep(2)
             subprocess.run(cmd, shell=True, check=True)
             self.get_logger().info("All nodes except for 'process_handler' and 'rcs client' have been killed.")
+            self.started = False
         except subprocess.CalledProcessError:
             self.color_print.print_in_yellow("failed to execute it")
             
@@ -118,14 +131,6 @@ class NodeMonitor(Node):
             response.success = False
             response.message = "Failed to kill all ROS2 nodes."
         return response
-
-    def get_pid_of_node(self, node_name):
-        cmd = ['pgrep',  f'{node_name}']
-        result = subprocess.run(cmd, stdout=subprocess.PIPE)
-        try:
-            return int(result.stdout.decode('utf-8').strip())
-        except ValueError:
-            return None
 
 
 def main():

@@ -24,7 +24,8 @@ def launch_setup(context, *args, **kwargs):
 
     share_dir = get_package_share_directory('map_handler')
     # Define the path to the parameter file
-    if not use_sim_time:
+    print(LaunchConfiguration('use_sim_time').perform(context))
+    if LaunchConfiguration('use_sim_time').perform(context) == "False":
         print("DO NOT USE SIM TIME")
         tag_param_file = os.path.join(share_dir,'param', 'tags_36h11.yaml')
     else:
@@ -87,7 +88,7 @@ def launch_setup(context, *args, **kwargs):
 def generate_launch_description():
     map_name_arg = DeclareLaunchArgument('map_name', default_value='sh', description='Name of the map')
     camera_name_arg = DeclareLaunchArgument('camera_name', default_value='camera', description='Name of the map')
-    use_sim_time_arg = DeclareLaunchArgument('use_sim_time', default_value='true', description='use sim time or not')
+    use_sim_time_arg = DeclareLaunchArgument('use_sim_time', default_value='True', description='use sim time or not')
     return LaunchDescription([
         map_name_arg,
         camera_name_arg,

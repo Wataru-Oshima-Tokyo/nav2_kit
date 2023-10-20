@@ -48,7 +48,7 @@ private:
         for (int i = index_min; i < index_max; i++)
         {   
             if ((ranges[i] < 1.0 && i >= index_min_slowdown && i <= index_max_slowdown) || 
-                (backup && ranges[i] < 3.0 )){
+                (backup && ranges[i] < 1.0 )){
                 twist.linear.x = - 0.2;
                 RCLCPP_WARN(this->get_logger(), "Back up ");
                 scan_checker = true;
