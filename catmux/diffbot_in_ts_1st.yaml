@@ -4,7 +4,7 @@ common:
 parameters:
   robot_name: diffbot
   map_name: ts_1st
-  world_name: map_ts_1st
+  world_name: map_ts_1st_no_marker
   min_height_for_move: 0.0
   map_filter_name: aksk_keepout
   use_simulator: True
@@ -25,7 +25,7 @@ windows:
       - ros2 launch sim_worlds2 launch_world.launch.py use_simulator:=${use_simulator} headless:=${headless} world_name:=${world_name} rviz_file:=${rviz_name}
   - name: spawn_diffbot
     commands:
-      - ros2 launch sim_worlds2 spawn_diffbot.launch.py spawn_x_val:=3.0 spawn_y_val:=4.5 
+      - ros2 launch sim_worlds2 spawn_diffbot.launch.py spawn_x_val:=3.0 spawn_y_val:=6.8
   - name: tag_server
     commands:
       - ros2 launch map_handler marker_reader.launch.py map_name:=${map_name} camera_name:=${camera_name}
