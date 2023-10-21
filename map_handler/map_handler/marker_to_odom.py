@@ -1,3 +1,4 @@
+import sys
 import tf2_ros
 import tf2_geometry_msgs  # To convert PoseStamped which is often used in marker detections
 import rclpy
@@ -9,6 +10,8 @@ import yaml
 import time
 import math
 from apriltag_msgs.msg import AprilTagDetectionArray
+from techshare_ros_pkg2.srv import SendMsg
+
 
 class MarkerLcalization(Node):
     def __init__(self):
@@ -20,6 +23,8 @@ class MarkerLcalization(Node):
         self.pose_array = []
         use_sim_time_ = self.get_parameter("use_sim_time").get_parameter_value().bool_value 
         self.get_logger().info(f"use_sim_time {use_sim_time_}")
+        self.rcs_send_msg_service = self.create_client(SendMsg, "send_msg")
+        self.req = SendMsg.Request()
         if use_sim_time_:
             self.get_logger().info('USE SIM TIME ')
             self.set_parameters([rclpy.parameter.Parameter("use_sim_time", rclpy.parameter.Parameter.Type.BOOL, True)])
@@ -35,6 +40,7 @@ class MarkerLcalization(Node):
         self.timer2 = self.create_timer(0.1, self.run)  # 0.1 seconds = 10ms = 10Hz
         self.transform_fetched = False
         self.initial_transform = False
+        self.now = time.time()
 
 
     def lookup_transform(self):
@@ -45,11 +51,18 @@ class MarkerLcalization(Node):
                 self.get_logger().info('Map to marker Transform obtained successfully!')
                 # Set the flag to True after successfully fetching the transform
                 self.transform_fetched = True
-
+                self.now = time.time()
                 # Use the transform as required
                 # ... [your code here] ...
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
                 self.get_logger().error('Error looking up transform: %s' % e)
+
+    def isPassedTime(self, duration):
+        if (time.time() - self.now) > duration:
+            return True
+        else:
+            return False
+
 
     def run(self):
         try:
@@ -65,10 +78,28 @@ class MarkerLcalization(Node):
                 self.publish_transform(transform.transform)
                 self.initial_transform = True
                 self.get_logger().info('Transform obtained successfully!')
+                self.req.message = "Found the marker! Now you should see the robot on the map"
+                self.req.error = False
+                self.rcs_send_msg_service.call_async(self.req)
+
+
+
+
             # Use the transform as required
             # ... [your code here] ...
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
             self.get_logger().error('Error looking up transform: %s' % e)
+            if self.transform_fetched and not self.initial_transform and self.isPassedTime(5) and not self.isPassedTime(10):
+                self.req.message = "Still looking for the marker..."
+                self.req.error = True
+                self.rcs_send_msg_service.call_async(self.req)
+            elif self.transform_fetched and not self.initial_transform and self.isPassedTime(15) and not self.isPassedTime(20):
+                self.req.message = "Cannot find the marker for 15 seconds... Please set the initial pose on GUI!"
+                self.req.error = True
+                self.rcs_send_msg_service.call_async(self.req)
+                self.destroy_node() 
+                self.initial_transform = True
+                sys.exit()
 
 
 
