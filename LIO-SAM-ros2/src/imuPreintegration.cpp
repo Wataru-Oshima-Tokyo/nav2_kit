@@ -13,6 +13,7 @@
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/inference/Symbol.h>
 #include <std_srvs/srv/trigger.hpp>
+#include "techshare_ros_pkg2/srv/send_msg.hpp"
 
 #include <gtsam/nonlinear/ISAM2.h>
 #include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
@@ -183,9 +184,11 @@ public:
     std::mutex mtx;
     //original 
     rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr restart_client_;
+    rclcpp::Client<techshare_ros_pkg2::srv::SendMsg>::SharedPtr message_client;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subImu;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subOdometry;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pubImuOdometry;
+    
 
     rclcpp::CallbackGroup::SharedPtr callbackGroupImu;
     rclcpp::CallbackGroup::SharedPtr callbackGroupOdom;
@@ -217,7 +220,7 @@ public:
     bool doneFirstOpt = false;
     double lastImuT_imu = -1;
     double lastImuT_opt = -1;
-
+    
     gtsam::ISAM2 optimizer;
     gtsam::NonlinearFactorGraph graphFactors;
     gtsam::Values graphValues;
@@ -271,7 +274,8 @@ public:
         
         //original
         restart_client_ = this->create_client<std_srvs::srv::Trigger>("restart");
-    
+        message_client = this->create_client<techshare_ros_pkg2::srv::SendMsg>("send_msg");
+
     }
 
     void resetOptimization()
@@ -445,6 +449,10 @@ public:
         if (failureDetection(prevVel_, prevBias_))
         {
             // resetParams();
+            auto message_request = std::make_shared<techshare_ros_pkg2::srv::SendMsg::Request>();
+            message_request->message = "Found Large velocity error in LIO-SAM!";
+            message_request->error = true;
+            message_client->async_send_request(message_request);
             auto restart_request = std::make_shared<std_srvs::srv::Trigger::Request>();
             restart_client_->async_send_request(restart_request);
             return;

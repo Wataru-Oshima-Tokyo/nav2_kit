@@ -1,6 +1,7 @@
 #include "utility.hpp"
 #include "lio_sam/msg/cloud_info.hpp"
 
+
 struct VelodynePointXYZIRT
 {
     PCL_ADD_POINT4D
