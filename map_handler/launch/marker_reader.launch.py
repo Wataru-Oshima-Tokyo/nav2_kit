@@ -19,7 +19,7 @@ def launch_setup(context, *args, **kwargs):
     camera_topic = "/" + camera_name +"/image_raw"
     camera_info = "/" + camera_name + "/camera_info"
     marker_name = map_name + "_marker.yaml"
-
+    emcl_param_name = "liosam_emcl.yaml"
 
 
     share_dir = get_package_share_directory('map_handler')
@@ -33,6 +33,7 @@ def launch_setup(context, *args, **kwargs):
         tag_param_file = os.path.join(share_dir,'param', 'tags_36h11_sim.yaml')
 
     marker_param_file = os.path.join(share_dir, 'param', marker_name)
+    emcl_param_file = os.path.join(share_dir, 'param', emcl_param_name)
     
     # Load parameters
     with open(marker_param_file, 'r') as f:
@@ -72,17 +73,20 @@ def launch_setup(context, *args, **kwargs):
             ],
             parameters=[tag_param_file]
         )
-    initial_pose_setter_node = Node(
-        package='map_handler',
-        executable='init_pose_setter',
-        name='init_pose_setter_node',
-        output='screen'
-    )
+
+    emcl_node = Node(
+                name='emcl2',
+                package='emcl2',
+                executable='emcl2_node',
+                parameters=[emcl_param_file],
+                output='screen'
+        )
+
     return [
         static_map_to_marker_node,
         dynamic_marker_to_odom_node,
         apriltag_node,
-        initial_pose_setter_node
+        emcl_node
     ]
 
 def generate_launch_description():

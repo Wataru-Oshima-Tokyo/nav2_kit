@@ -89,12 +89,12 @@ class MarkerLcalization(Node):
             # ... [your code here] ...
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
             self.get_logger().error('Error looking up transform: %s' % e)
-            if self.transform_fetched and not self.initial_transform and self.isPassedTime(5) and not self.isPassedTime(10):
+            if self.transform_fetched and not self.initial_transform and self.isPassedTime(2) and not self.isPassedTime(5):
                 self.req.message = "Still looking for the marker..."
                 self.req.error = True
                 self.rcs_send_msg_service.call_async(self.req)
-            elif self.transform_fetched and not self.initial_transform and self.isPassedTime(15) and not self.isPassedTime(20):
-                self.req.message = "Cannot find the marker for 15 seconds... Please set the initial pose on GUI!"
+            elif self.transform_fetched and not self.initial_transform and self.isPassedTime(7) and not self.isPassedTime(10):
+                self.req.message = "Cannot find the marker for 10 seconds... Please set the initial pose on GUI!"
                 self.req.error = True
                 self.rcs_send_msg_service.call_async(self.req)
                 self.destroy_node() 

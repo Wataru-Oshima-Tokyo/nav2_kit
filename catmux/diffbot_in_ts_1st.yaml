@@ -1,6 +1,6 @@
 ---
 common:
-  default_window: rcs_client
+  default_window: map_server
 parameters:
   robot_name: diffbot
   map_name: ts_1st

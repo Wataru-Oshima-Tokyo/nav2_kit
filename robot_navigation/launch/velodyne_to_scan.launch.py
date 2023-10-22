@@ -21,10 +21,17 @@ def generate_launch_description():
     return LaunchDescription([
         min_height_for_move_arg,
         Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='velodyne_to_cloud',
+            arguments=['0', '0', '0', '0', '0', '0', '1', 'base_link', 'laser_link']
+        ),
+        Node(
             package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
             remappings=[('cloud_in', '/points_raw'),
                         ('scan', '/scan')],
             parameters=[{
+                'target_frame': 'laser_link',
                 'transform_tolerance': 0.01,
                 'min_height': 0.0,
                 'max_height': 2.0,
@@ -44,6 +51,7 @@ def generate_launch_description():
             remappings=[('cloud_in', '/points_raw'),
                         ('scan', '/scan_for_move')],
             parameters=[{
+                'target_frame': 'laser_link',
                 'transform_tolerance': 0.01,
                 'min_height': min_height_for_move_,
                 'max_height': 3.0,
