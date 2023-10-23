@@ -9,20 +9,12 @@ from launch_ros.actions import Node
 def generate_launch_description():
 
     share_dir = get_package_share_directory('lio_sam')
-    parameter_file = LaunchConfiguration('params_file')
+    parameter_file = os.path.join(share_dir, 'config', 'unilidar_param.yaml')
     xacro_path = os.path.join(share_dir, 'config', 'robot.urdf.xacro')
     rviz_config_file = os.path.join(share_dir, 'config', 'rviz2.rviz')
 
-    params_declare = DeclareLaunchArgument(
-        'params_file',
-        default_value=os.path.join(
-            share_dir, 'config', 'params.yaml'),
-        description='FPath to the ROS2 parameters file to use.')
-
-    print("params_file : {}".format(parameter_file))
 
     return LaunchDescription([
-        params_declare,
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',

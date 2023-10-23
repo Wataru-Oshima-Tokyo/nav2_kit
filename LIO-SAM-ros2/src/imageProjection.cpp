@@ -31,6 +31,24 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(OusterPointXYZIRT,
     (uint8_t, ring, ring) (uint16_t, noise, noise) (uint32_t, range, range)
 )
 
+namespace unilidar_ros {
+struct Point
+{
+  PCL_ADD_POINT4D
+  PCL_ADD_INTENSITY
+  std::uint16_t ring;
+  float time;
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+} EIGEN_ALIGN16;
+}
+POINT_CLOUD_REGISTER_POINT_STRUCT(unilidar_ros::Point,
+  (float, x, x)(float, y, y)(float, z, z)
+  (float, intensity, intensity)
+  (std::uint16_t, ring, ring)
+  (float, time, time)
+)
+
+
 // Use the Velodyne point format as a common representation
 using PointXYZIRT = VelodynePointXYZIRT;
 
@@ -72,6 +90,7 @@ private:
 
     pcl::PointCloud<PointXYZIRT>::Ptr laserCloudIn;
     pcl::PointCloud<OusterPointXYZIRT>::Ptr tmpOusterCloudIn;
+    pcl::PointCloud<unilidar_ros::Point>::Ptr tmpUnilidarCloudIn;
     pcl::PointCloud<PointType>::Ptr   fullCloud;
     pcl::PointCloud<PointType>::Ptr   extractedCloud;
 
@@ -130,6 +149,9 @@ public:
         allocateMemory();
         resetParameters();
 
+
+
+
         pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
     }
 
@@ -137,6 +159,7 @@ public:
     {
         laserCloudIn.reset(new pcl::PointCloud<PointXYZIRT>());
         tmpOusterCloudIn.reset(new pcl::PointCloud<OusterPointXYZIRT>());
+        tmpUnilidarCloudIn.reset(new pcl::PointCloud<unilidar_ros::Point>());
         fullCloud.reset(new pcl::PointCloud<PointType>());
         extractedCloud.reset(new pcl::PointCloud<PointType>());
 
@@ -231,9 +254,10 @@ public:
         // convert cloud
         currentCloudMsg = std::move(cloudQueue.front());
         cloudQueue.pop_front();
-        if (sensor == SensorType::VELODYNE || sensor == SensorType::LIVOX)
+        if (sensor == SensorType::VELODYNE || sensor == SensorType::LIVOX || sensor == SensorType::UNILIDAR)
         {
             pcl::moveFromROSMsg(currentCloudMsg, *laserCloudIn);
+            RCLCPP_ERROR(get_logger(), "Got uniliar data");
         }
         else if (sensor == SensorType::OUSTER)
         {
@@ -253,6 +277,24 @@ public:
                 dst.time = src.t * 1e-9f;
             }
         }
+        // else if (sensor == SensorType::UNILIDAR){
+        //     //I guess I need to do something here to convert unlidar to a right format   
+        //     pcl::moveFromROSMsg(currentCloudMsg, *tmpUnilidarCloudIn);
+        //     laserCloudIn->points.resize(tmpUnilidarCloudIn->size());
+        //     laserCloudIn->is_dense = tmpUnilidarCloudIn->is_dense;
+        //     for (size_t i = 0; i < tmpUnilidarCloudIn->size(); i++)
+        //     {
+        //         auto &src = tmpUnilidarCloudIn->points[i];
+        //         auto &dst = laserCloudIn->points[i];
+        //         dst.x = src.x;
+        //         dst.y = src.y;
+        //         dst.z = src.z;
+        //         dst.intensity = src.intensity;
+        //         dst.ring = src.ring;
+        //         dst.time = src.t * 1e-9f;
+        //     }
+        //     RCLCPP_ERROR(get_logger(), "Got uniliar data");
+        // }
         else
         {
             RCLCPP_ERROR_STREAM(get_logger(), "Unknown sensor type: " << int(sensor));
@@ -327,7 +369,7 @@ public:
         imuDeskewInfo();
 
         odomDeskewInfo();
-
+        
         return true;
     }
 
@@ -557,7 +599,6 @@ public:
             thisPoint.y = laserCloudIn->points[i].y;
             thisPoint.z = laserCloudIn->points[i].z;
             thisPoint.intensity = laserCloudIn->points[i].intensity;
-
             float range = pointDistance(thisPoint);
             if (range < lidarMinRange || range > lidarMaxRange)
                 continue;
@@ -570,7 +611,7 @@ public:
                 continue;
 
             int columnIdn = -1;
-            if (sensor == SensorType::VELODYNE || sensor == SensorType::OUSTER)
+            if (sensor == SensorType::VELODYNE || sensor == SensorType::OUSTER || sensor == SensorType::UNILIDAR)
             {
                 float horizonAngle = atan2(thisPoint.x, thisPoint.y) * 180 / M_PI;
                 static float ang_res_x = 360.0/float(Horizon_SCAN);
@@ -578,7 +619,7 @@ public:
                 if (columnIdn >= Horizon_SCAN)
                     columnIdn -= Horizon_SCAN;
             }
-            else if (sensor == SensorType::LIVOX)
+            else if (sensor == SensorType::LIVOX )
             {
                 columnIdn = columnIdnCountVec[rowIdn];
                 columnIdnCountVec[rowIdn] += 1;

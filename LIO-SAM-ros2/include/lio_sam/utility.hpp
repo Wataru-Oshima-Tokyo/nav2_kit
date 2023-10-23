@@ -62,7 +62,7 @@ using namespace std;
 
 typedef pcl::PointXYZI PointType;
 
-enum class SensorType { VELODYNE, OUSTER, LIVOX };
+enum class SensorType { VELODYNE, OUSTER, LIVOX, UNILIDAR};
 
 class ParamServer : public rclcpp::Node
 {
@@ -200,6 +200,9 @@ public:
         else if (sensorStr == "livox")
         {
             sensor = SensorType::LIVOX;
+        }
+        else if (sensorStr == "unilidar"){
+            sensor = SensorType::UNILIDAR;
         }
         else
         {
@@ -355,6 +358,7 @@ sensor_msgs::msg::PointCloud2 publishCloud(rclcpp::Publisher<sensor_msgs::msg::P
         thisPub->publish(tempCloud);
     return tempCloud;
 }
+
 
 template<typename T>
 double stamp2Sec(const T& stamp)
