@@ -27,6 +27,7 @@ class NodeMonitor(Node):
         self.imu_check = self.get_parameter("imu_check").get_parameter_value().bool_value 
         self.sim = self.get_parameter("sim").get_parameter_value().bool_value 
         self.get_logger().info(f"docker {self.docker}")
+        self.get_logger().info(f"imu_check {self.imu_check}")
         if self.catmux_dict is None:
             self.catmux_dict = self.get_parameter('work_space').value
         if self.catmux_command is None:
