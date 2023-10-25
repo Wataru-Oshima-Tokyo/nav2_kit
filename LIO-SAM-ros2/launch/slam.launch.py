@@ -1,32 +1,21 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument,IncludeLaunchDescription,RegisterEventHandler,GroupAction
+from launch.actions import DeclareLaunchArgument,IncludeLaunchDescription,RegisterEventHandler,GroupAction,OpaqueFunction
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration,PythonExpression,Command,PathJoinSubstitution
 from launch.event_handlers import OnProcessStart, OnProcessExit
 
-
-def generate_launch_description():
+def launch_setup(context, *args, **kwargs):
     fake_frame = "fake_velodyne_link"
     share_dir = get_package_share_directory('lio_sam')
-    lio_parameter_file = LaunchConfiguration('lio_parameter_file')
-
+    parameter_file = LaunchConfiguration('lio_parameter_file').perform(context)
+    parameter_file += ".yaml"
     use_sim_time = LaunchConfiguration('use_sim_time')
+    lio_parameter_file = os.path.join(share_dir, 'config', parameter_file)
 
-    
-    params_declare = DeclareLaunchArgument(
-        'lio_parameter_file',
-        default_value=os.path.join(
-            share_dir, 'config', 'world_map.yaml'),
-        description='FPath to the ROS2 parameters file to use.')
-
-    use_sim_time_arg = DeclareLaunchArgument(
-        'use_sim_time',
-        default_value='true',
-        description='use sim time or not')
 
     velodyne_to_base_link =  Node(
         package='fake_frame',
@@ -96,12 +85,28 @@ def generate_launch_description():
         )
     )
 
+    return [
+        static_world_to_map_node,
+        delayed_lio_sam_server,
+        delayed_fake_odom
+    ]
+
+def generate_launch_description():
+    
+    params_declare = DeclareLaunchArgument(
+        'lio_parameter_file',
+        default_value='world_map',
+        description='FPath to the ROS2 parameters file to use.')
+
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='use sim time or not')
+
 
     return LaunchDescription([
         params_declare,
         use_sim_time_arg,
-        static_world_to_map_node,
-        delayed_lio_sam_server,
-        delayed_fake_odom,
+        OpaqueFunction(function=launch_setup)
 
     ])

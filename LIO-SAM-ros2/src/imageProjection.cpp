@@ -257,7 +257,6 @@ public:
         if (sensor == SensorType::VELODYNE || sensor == SensorType::LIVOX || sensor == SensorType::UNILIDAR)
         {
             pcl::moveFromROSMsg(currentCloudMsg, *laserCloudIn);
-            RCLCPP_ERROR(get_logger(), "Got uniliar data");
         }
         else if (sensor == SensorType::OUSTER)
         {
@@ -277,24 +276,6 @@ public:
                 dst.time = src.t * 1e-9f;
             }
         }
-        // else if (sensor == SensorType::UNILIDAR){
-        //     //I guess I need to do something here to convert unlidar to a right format   
-        //     pcl::moveFromROSMsg(currentCloudMsg, *tmpUnilidarCloudIn);
-        //     laserCloudIn->points.resize(tmpUnilidarCloudIn->size());
-        //     laserCloudIn->is_dense = tmpUnilidarCloudIn->is_dense;
-        //     for (size_t i = 0; i < tmpUnilidarCloudIn->size(); i++)
-        //     {
-        //         auto &src = tmpUnilidarCloudIn->points[i];
-        //         auto &dst = laserCloudIn->points[i];
-        //         dst.x = src.x;
-        //         dst.y = src.y;
-        //         dst.z = src.z;
-        //         dst.intensity = src.intensity;
-        //         dst.ring = src.ring;
-        //         dst.time = src.t * 1e-9f;
-        //     }
-        //     RCLCPP_ERROR(get_logger(), "Got uniliar data");
-        // }
         else
         {
             RCLCPP_ERROR_STREAM(get_logger(), "Unknown sensor type: " << int(sensor));
