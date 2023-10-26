@@ -80,7 +80,7 @@ class InitialPoseSetter(Node):
                 alpha_median = np.median(self.alpha_array)
                 if self.lookup_transform() and alpha_median > 0.95:
                     self.color_print.print_in_green("Done setting initialpose!!")
-                    # self.emcl_tf_publish_set_service.call_async(self.emcl_tf_req)
+                    self.emcl_tf_publish_set_service.call_async(self.emcl_tf_req)
                     self.publishMapToOdom()
                     self.init_pose_check = False
                     self.msg_req.message = f"Done setting initialpose!! | Alpha median {alpha_median*100}%"
