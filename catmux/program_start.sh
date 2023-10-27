@@ -1,8 +1,8 @@
-RCS_SERVER_ADDRESS=wataru-orin
+RCS_SERVER_ADDRESS=techshare-user
 ROBOT_NAME=scout_mini_actual
 MAP_ID=ts_1st
-WORK_SPACE=$HOME/humble_ws
-CATMUX_SPACE=$HOME/humble_ws/src/nav2_kit/catmux/
+WORK_SPACE=$HOME/wataru_ws
+CATMUX_SPACE=$WORK_SPACE/src/nav2_kit/catmux/
 CATMUX_COMMAND="diffbot_in_ts_1st"
 docker=false
 sim=true

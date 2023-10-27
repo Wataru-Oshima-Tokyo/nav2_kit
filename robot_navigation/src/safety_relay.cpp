@@ -94,7 +94,7 @@ private:
     {   
 
         twist.angular.z = msg->angular.z;
-        if(!warning || fabs(msg->linear.x) < fabs(twist.linear.x))
+        if(!warning || fabs(msg->linear.x) < fabs(twist.linear.x) ||  msg->linear.x < 0)
             twist.linear.x = msg->linear.x; 
 
 

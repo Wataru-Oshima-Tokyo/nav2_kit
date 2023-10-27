@@ -32,7 +32,7 @@ class InitialPoseSetter(Node):
         self.transform = None
         self.srv = self.create_service(Trigger, 'kill_marker_tf', self.kill_nodes_callback)
         self.rcs_send_msg_service = self.create_client(SendMsg, "send_msg")
-        self.emcl_tf_publish_set_service = self.create_client(Empty, "emcl_tf_publish_set")
+        self.emcl_tf_publish_set_service = self.create_client(Empty, "emcl_node_finish_")
         self.msg_req = SendMsg.Request()
         self.emcl_tf_req = Empty.Request()
         self.init_pose_check = False
@@ -80,7 +80,7 @@ class InitialPoseSetter(Node):
                 alpha_median = np.median(self.alpha_array)
                 if self.lookup_transform() and alpha_median > 0.95:
                     self.color_print.print_in_green("Done setting initialpose!!")
-                    # self.emcl_tf_publish_set_service.call_async(self.emcl_tf_req)
+                    self.emcl_tf_publish_set_service.call_async(self.emcl_tf_req)
                     self.publishMapToOdom()
                     self.init_pose_check = False
                     self.msg_req.message = f"Done setting initialpose!! | Alpha median {alpha_median*100}%"
