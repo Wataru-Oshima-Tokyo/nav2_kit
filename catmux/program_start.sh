@@ -1,4 +1,4 @@
-RCS_SERVER_ADDRESS=wataru-orin
+RCS_SERVER_ADDRESS=192.168.0.74
 ROBOT_NAME=scout_mini_actual
 MAP_ID=ts_1st
 WORK_SPACE=$HOME/humble_ws
