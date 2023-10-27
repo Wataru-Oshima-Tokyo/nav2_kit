@@ -94,7 +94,7 @@ class MarkerLcalization(Node):
                 self.req.error = True
                 self.rcs_send_msg_service.call_async(self.req)
             elif self.transform_fetched and not self.initial_transform and self.isPassedTime(7) and not self.isPassedTime(10):
-                self.req.message = "Cannot find the marker for 10 seconds... Please set the initial pose on GUI!"
+                self.req.message = "Cannot find the marker for 10 seconds... Please wait till the emcl node is ready..."
                 self.req.error = True
                 self.rcs_send_msg_service.call_async(self.req)
                 self.destroy_node() 
