@@ -65,9 +65,7 @@ private:
             if (should_append) {
                 recorded_trajectory_.header.frame_id = msg->header.frame_id;
                 recorded_trajectory_.poses.push_back(msg->poses.back());  // Appending the latest pose
-                RCLCPP_INFO(this->get_logger(), "Appending to the trajectory");
-            }else{
-                RCLCPP_WARN(this->get_logger(), "Staying the same place");
+                RCLCPP_INFO(this->get_logger(), "\033[34mAppending to the trajectory\033[0m");
             }
         }
     }

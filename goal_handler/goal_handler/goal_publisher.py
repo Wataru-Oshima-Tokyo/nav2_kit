@@ -234,6 +234,9 @@ class GoalActionServer(Node):
             time.sleep(1)
 
         if msg.poses:
+            # current_position = self.get_pose()
+
+
             self.get_logger().info('Publish the path')
             # self.nav.cancelTask()
             self.first_path = not self.first_path
