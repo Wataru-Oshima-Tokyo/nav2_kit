@@ -234,7 +234,7 @@ class GoalActionServer(Node):
             time.sleep(1)
 
         if msg.poses:
-            # current_position = self.get_pose()
+            current_position = self.get_pose()
 
 
             self.get_logger().info('Publish the path')
