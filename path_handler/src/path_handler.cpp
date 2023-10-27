@@ -1,6 +1,8 @@
 #include <rclcpp/rclcpp.hpp>
 #include <nav_msgs/msg/path.hpp>
+#include "geometry_msgs/msg/pose_stamped.hpp"
 #include <std_srvs/srv/empty.hpp>
+#include <fstream>
 
 using namespace std::placeholders;
 
@@ -9,6 +11,8 @@ class PathRecorder : public rclcpp::Node
 public:
     PathRecorder() : Node("path_recorder")
     {
+        this->declare_parameter<std::string>("trajectory_file_path", "./");
+        this->get_parameter("trajectory_file_path", file_path);
         trajectory_subscriber_ = this->create_subscription<nav_msgs::msg::Path>(
             "/lio_sam/mapping/path",
             10,
@@ -27,15 +31,44 @@ public:
             std::bind(&PathRecorder::start, this, _1, _2));
 
         trajectory_publisher_ = this->create_publisher<nav_msgs::msg::Path>("/replay_trajectory", 10);
+
     }
 
 private:
     void trajectoryCallback(const nav_msgs::msg::Path::SharedPtr msg)
     {
         if (is_recording_ && !msg->poses.empty()) {
-            RCLCPP_INFO(this->get_logger(), "Appending to the trajectory");
-            recorded_trajectory_.header.frame_id = msg->header.frame_id;
-            recorded_trajectory_.poses.push_back(msg->poses.back());  // Appending the latest pose
+            
+            
+            bool should_append = true;
+            
+            if (!recorded_trajectory_.poses.empty()) {
+                // Retrieve the last pose in recorded_trajectory_
+                auto& last_pose = recorded_trajectory_.poses.back().pose;
+                
+                // Retrieve the latest pose from msg
+                auto& new_pose = msg->poses.back().pose;
+
+                // Compute the position difference
+                double dx = last_pose.position.x - new_pose.position.x;
+                double dy = last_pose.position.y - new_pose.position.y;
+                double dz = last_pose.position.z - new_pose.position.z;
+
+                double distance = sqrt(dx*dx + dy*dy + dz*dz);
+
+                double threshold = 0.05; // e.g., 5 cm
+                if (distance < threshold) {
+                    should_append = false;
+                }
+            }
+
+            if (should_append) {
+                recorded_trajectory_.header.frame_id = msg->header.frame_id;
+                recorded_trajectory_.poses.push_back(msg->poses.back());  // Appending the latest pose
+                RCLCPP_INFO(this->get_logger(), "Appending to the trajectory");
+            }else{
+                RCLCPP_WARN(this->get_logger(), "Staying the same place");
+            }
         }
     }
 
@@ -43,7 +76,7 @@ private:
                 std::shared_ptr<std_srvs::srv::Empty::Response> res)
     {
         is_recording_ = true;
-        recorded_trajectory_ = nav_msgs::msg::Path();
+        // recorded_trajectory_ = nav_msgs::msg::Path();
         recorded_trajectory_.header.stamp = this->now(); // Setting the start timestamp
     }
 
@@ -51,28 +84,26 @@ private:
                std::shared_ptr<std_srvs::srv::Empty::Response> res)
     {
         recorded_trajectory_ = nav_msgs::msg::Path();
+        is_recording_ = false;
     }
 
     void finish(const std::shared_ptr<std_srvs::srv::Empty::Request> req, 
                 std::shared_ptr<std_srvs::srv::Empty::Response> res)
     {
         is_recording_ = false;
-        recorded_trajectory_.header.stamp = this->now(); // Updating the timestamp to the end of recording
-    }
+        std::string file_name = file_path + "/recorded_trajectory.txt";
+        if (!recorded_trajectory_.poses.empty())
+            saveToFile(file_name);
 
-    // void start(const std::shared_ptr<std_srvs::srv::Empty::Request> req, 
-    //            std::shared_ptr<std_srvs::srv::Empty::Response> res)
-    // {
-    //     if (!recorded_trajectory_.poses.empty()) {
-    //         trajectory_publisher_->publish(recorded_trajectory_);
-    //         // recorded_trajectory_ = nav_msgs::msg::Path();
-    //     }
-    // }
+    }
 
     void start(const std::shared_ptr<std_srvs::srv::Empty::Request> req, 
             std::shared_ptr<std_srvs::srv::Empty::Response> res)
     {
+        std::string file_name = file_path + "/recorded_trajectory.txt";
+        loadFromFile(file_name);
         if (!recorded_trajectory_.poses.empty()) {
+            recorded_trajectory_.header.stamp = this->now(); // Updating the timestamp to the end of recording
             size_t midpoint = recorded_trajectory_.poses.size() / 2;
 
             // Create two new paths for the two halves
@@ -90,12 +121,12 @@ private:
 
             // Calculate the cumulative distance of the first half
             double distance_first_half = computePathDistance(first_half);
-            double max_speed = 0.5; // Set this to your robot's average speed in m/s
+            double max_speed = 1.0; // Set this to your robot's average speed in m/s
             double estimated_time_seconds = distance_first_half / max_speed;
 
             // Publish the two halves with a delay based on the computed time
             trajectory_publisher_->publish(first_half);
-            std::chrono::nanoseconds estimated_time_nanoseconds(static_cast<int64_t>(15.0 * 1e9));
+            std::chrono::nanoseconds estimated_time_nanoseconds(static_cast<int64_t>(estimated_time_seconds * 1e9));
             RCLCPP_INFO(this->get_logger(), "Will wait for %lf seconds", estimated_time_seconds);
             rclcpp::sleep_for(estimated_time_nanoseconds);
             trajectory_publisher_->publish(second_half);
@@ -116,6 +147,70 @@ private:
         }
         return total_distance;
     }
+
+    void saveToFile(const std::string& filename) {
+        std::ofstream out_file(filename);
+        if (!out_file.is_open()) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to open the file: %s", filename.c_str());
+            return;
+        }
+
+
+        // Save the frame_id
+        out_file << "#FRAME_ID:" << recorded_trajectory_.header.frame_id << std::endl;
+
+
+        for (const auto& poseStamped : recorded_trajectory_.poses) {
+            const auto& position = poseStamped.pose.position;
+            out_file << position.x << "," << position.y << "," << position.z << std::endl;
+        }
+
+        out_file.close();
+        RCLCPP_INFO(this->get_logger(), "Saved trajectory to: %s", filename.c_str());
+    }
+
+    void loadFromFile(const std::string& filename) {
+        std::ifstream in_file(filename);
+        if (!in_file.is_open()) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to open the file: %s", filename.c_str());
+            return;
+        }
+
+        std::string line;
+
+        // Read the frame_id
+        std::getline(in_file, line);
+        if (line.find("#FRAME_ID:") == 0) {
+            recorded_trajectory_.header.frame_id = line.substr(10);  // Extract the frame_id after "#FRAME_ID:"
+        }
+
+        // Read the trajectory poses
+        recorded_trajectory_.poses.clear();
+        while (std::getline(in_file, line)) {
+            if (line.find("#") == 0) continue;  // Skip any comment lines
+
+            std::istringstream ss(line);
+            double x, y, z;
+            char comma;
+            if (!(ss >> x >> comma >> y >> comma >> z)) {
+                RCLCPP_WARN(this->get_logger(), "Failed to parse a line in the file: %s", line.c_str());
+                continue;
+            }
+
+            geometry_msgs::msg::PoseStamped pose_stamped;
+            pose_stamped.pose.position.x = x;
+            pose_stamped.pose.position.y = y;
+            pose_stamped.pose.position.z = z;
+
+            recorded_trajectory_.poses.push_back(pose_stamped);
+        }
+
+        in_file.close();
+        RCLCPP_INFO(this->get_logger(), "Loaded trajectory from: %s", filename.c_str());
+    }
+
+
+
     rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr trajectory_subscriber_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr trajectory_publisher_;
 
@@ -125,6 +220,7 @@ private:
     rclcpp::Service<std_srvs::srv::Empty>::SharedPtr start_service_;
 
     nav_msgs::msg::Path recorded_trajectory_;
+    std::string file_path;
     bool is_recording_ = false;
 };
 
