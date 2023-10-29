@@ -1,7 +1,7 @@
 RCS_SERVER_ADDRESS=192.168.0.74
 ROBOT_NAME=scout_mini_actual
 MAP_ID=ts_1st
-WORK_SPACE=$HOME/wataru_ws
+WORK_SPACE=$HOME/humble_ws
 CATMUX_SPACE=$WORK_SPACE/src/nav2_kit/catmux/
 CATMUX_COMMAND="diffbot_in_ts_1st"
 docker=false
@@ -22,5 +22,5 @@ gnome-terminal -- bash -c "     ros2 run process_checker process_handler --ros-a
         --param work_space:=$CATMUX_SPACE \
         --param catmux_command:=$CATMUX_COMMAND \
         --param docker:=$docker \
-	--param sim:=$sim"
+	--param sim:=$sim;"
 
