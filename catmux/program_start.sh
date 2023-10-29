@@ -1,9 +1,9 @@
 RCS_SERVER_ADDRESS=192.168.0.74
 ROBOT_NAME=scout_mini_actual
-MAP_ID=ts_1st
+MAP_ID=aksk
 WORK_SPACE=$HOME/humble_ws
 CATMUX_SPACE=$WORK_SPACE/src/nav2_kit/catmux/
-CATMUX_COMMAND="diffbot_in_ts_1st"
+CATMUX_COMMAND="diffbot_in_aksk"
 docker=false
 sim=true
 # Launch the rcs_client in one gnome-terminal
