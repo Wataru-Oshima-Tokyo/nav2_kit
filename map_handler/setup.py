@@ -1,5 +1,6 @@
 from setuptools import find_packages, setup
 import glob
+from os.path import isdir
 package_name = 'map_handler'
 library = 'map_handler/library'
 setup(
@@ -12,7 +13,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
          ('share/' + package_name + '/launch', glob.glob('launch/*.py')),
          ('share/' + package_name + '/param', glob.glob('param/*')),
-         ('share/' + package_name + '/maps', glob.glob('maps/*')),
+         ('share/' + package_name + '/maps', [f for f in glob.glob('maps/**/*', recursive=True) if not isdir(f)]),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

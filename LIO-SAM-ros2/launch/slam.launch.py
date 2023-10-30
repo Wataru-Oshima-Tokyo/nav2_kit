@@ -11,6 +11,7 @@ from launch.event_handlers import OnProcessStart, OnProcessExit
 def launch_setup(context, *args, **kwargs):
     fake_frame = "fake_velodyne_link"
     share_dir = get_package_share_directory('lio_sam')
+    map_handler_dir = get_package_share_directory('map_handler')
     parameter_file = LaunchConfiguration('lio_parameter_file').perform(context)
     parameter_file += ".yaml"
     use_sim_time = LaunchConfiguration('use_sim_time')
@@ -64,7 +65,7 @@ def launch_setup(context, *args, **kwargs):
                 package='lio_sam',
                 executable='lio_sam_mapOptimization',
                 name='lio_sam_mapOptimization',
-                parameters=[lio_parameter_file],
+                parameters=[lio_parameter_file, {"saveOdomDirectory": map_handler_dir}],
                 output='screen'
             ),
         ]
