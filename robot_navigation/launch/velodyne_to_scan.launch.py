@@ -54,7 +54,7 @@ def generate_launch_description():
                 'target_frame': 'laser_link',
                 'transform_tolerance': 0.01,
                 'min_height': min_height_for_move_,
-                'max_height': 3.0,
+                'max_height': 0.5,
                 'angle_min': theta_min_rad,
                 'angle_max': theta_max_rad,
                 'angle_increment': 0.0087,  # M_PI/360.0
