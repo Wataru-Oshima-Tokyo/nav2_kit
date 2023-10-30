@@ -90,6 +90,7 @@ public:
     // Save pcd
     bool savePCD;
     string savePCDDirectory;
+    string saveOdomDirectory;
 
     // Lidar Sensor Configuration
     SensorType sensor = SensorType::OUSTER;
@@ -185,7 +186,8 @@ public:
         get_parameter("savePCD", savePCD);
         declare_parameter("savePCDDirectory", "/Downloads/LOAM/");
         get_parameter("savePCDDirectory", savePCDDirectory);
-
+        declare_parameter("saveOdomDirectory", "./");
+        get_parameter("saveOdomDirectory", saveOdomDirectory);
         std::string sensorStr;
         declare_parameter("sensor", "ouster");
         get_parameter("sensor", sensorStr);

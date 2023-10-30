@@ -32,7 +32,7 @@ class InitialPoseSetter(Node):
         self.transform = None
         self.srv = self.create_service(Trigger, 'kill_marker_tf', self.kill_nodes_callback)
         self.rcs_send_msg_service = self.create_client(SendMsg, "send_msg")
-        self.emcl_tf_publish_set_service = self.create_client(Empty, "emcl_tf_publish_set")
+        self.emcl_tf_publish_set_service = self.create_client(Empty, "emcl_node_finish_")
         self.msg_req = SendMsg.Request()
         self.emcl_tf_req = Empty.Request()
         self.init_pose_check = False

@@ -197,6 +197,7 @@ void Costmap2DPublisher::publishCostmap()
   {
     if (costmap_pub_->get_subscription_count() > 0) {
       prepareGrid();
+      RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "\033[1;32m---->Publishing costmap.\033[0m");
       costmap_pub_->publish(std::move(grid_));
     }
   } else if (x0_ < xn_) {
@@ -218,7 +219,10 @@ void Costmap2DPublisher::publishCostmap()
           update->data[i++] = cost_translation_table_[cost];
         }
       }
+      
+
       costmap_update_pub_->publish(std::move(update));
+
     }
   }
 

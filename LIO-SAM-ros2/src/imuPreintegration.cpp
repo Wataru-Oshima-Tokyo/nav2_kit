@@ -453,8 +453,8 @@ public:
             message_request->message = "Found Large velocity error in LIO-SAM!";
             message_request->error = true;
             message_client->async_send_request(message_request);
-            auto restart_request = std::make_shared<std_srvs::srv::Trigger::Request>();
-            restart_client_->async_send_request(restart_request);
+            // auto restart_request = std::make_shared<std_srvs::srv::Trigger::Request>();
+            // restart_client_->async_send_request(restart_request);
             return;
         }
 

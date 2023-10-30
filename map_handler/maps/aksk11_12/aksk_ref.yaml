@@ -1,0 +1,7 @@
+image: aksk_world-crop.png
+resolution: 0.085970
+origin: [0.10000, 0.70000, 0.000000]
+negate: 1
+occupied_thresh: 0.65
+free_thresh: 0.196
+

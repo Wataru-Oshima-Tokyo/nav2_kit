@@ -13,7 +13,7 @@ from launch.substitutions import LaunchConfiguration
 def launch_setup(context, *args, **kwargs):
     map_name = LaunchConfiguration('map_name').perform(context)
     map_name = map_name + ".yaml"
-    map_file_path = os.path.join(get_package_share_directory('sim_worlds2'),
+    map_file_path = os.path.join(get_package_share_directory('map_handler'),
         'maps',
          map_name)      
 

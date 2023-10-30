@@ -227,11 +227,16 @@ class GoalActionServer(Node):
 
     def path_callback(self, msg):
         self.get_logger().info('Received a goal')
+        i = 0
         while not self.first_path and not self.follow_path_nav.isTaskComplete():
-            self.print_in_orange('Waiting for the previous goal is finished')
+            i+=1
+            self.follow_path_checker(i)
             time.sleep(1)
 
         if msg.poses:
+            current_position = self.get_pose()
+
+
             self.get_logger().info('Publish the path')
             # self.nav.cancelTask()
             self.first_path = not self.first_path
@@ -260,6 +265,18 @@ class GoalActionServer(Node):
         initial_pose.pose.orientation.w = initial_position.transform.rotation.w
         self.writeTheResult(initial_position, 'initial_pose')
         return initial_pose
+
+
+    def follow_path_checker(self, i):
+        feedback = self.follow_path_nav.getFeedback()
+        if feedback and i % 2 == 0:
+            self.print_in_blue('-------------------------------------------------')
+            self.get_logger().info('Distance remaining to the end goal: ' + '{:.2f}'.format(
+            feedback.distance_to_goal) + ' meters.')
+            self.print_in_blue('-------------------------------------------------')
+        if not self.first_path and  feedback.distance_to_goal < 0.5:
+            self.follow_path_nav.cancelTask()
+        # pass
 
     def path_checker(self, goal_poses, initial_pose, current_attempt):
         i = 0
