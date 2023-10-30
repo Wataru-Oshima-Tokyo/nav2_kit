@@ -13,9 +13,12 @@
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/inference/Symbol.h>
+#include "techshare_ros_pkg2/srv/send_msg.hpp"
 
 #include <gtsam/nonlinear/ISAM2.h>
-
+#include <yaml-cpp/yaml.h>
+#include <fstream>
+#include <string>
 using namespace gtsam;
 
 using symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
@@ -121,6 +124,8 @@ public:
     pcl::VoxelGrid<PointType> downSizeFilterSurroundingKeyPoses; // for surrounding key poses of scan-to-map optimization
 
     rclcpp::Time timeLaserInfoStamp;
+    rclcpp::Client<techshare_ros_pkg2::srv::SendMsg>::SharedPtr message_client;
+
     double timeLaserInfoCur;
 
     float transformTobeMapped[6];
@@ -150,7 +155,7 @@ public:
     Eigen::Affine3f incrementalOdometryAffineBack;
 
     std::unique_ptr<tf2_ros::TransformBroadcaster> br;
-
+    std::string file_name;
     mapOptimization(const rclcpp::NodeOptions & options) : ParamServer("lio_sam_mapOptimization", options)
     {
         ISAM2Params parameters;
@@ -248,7 +253,7 @@ public:
         downSizeFilterSurf.setLeafSize(mappingSurfLeafSize, mappingSurfLeafSize, mappingSurfLeafSize);
         downSizeFilterICP.setLeafSize(mappingSurfLeafSize, mappingSurfLeafSize, mappingSurfLeafSize);
         downSizeFilterSurroundingKeyPoses.setLeafSize(surroundingKeyframeDensity, surroundingKeyframeDensity, surroundingKeyframeDensity); // for surrounding key poses of scan-to-map optimization
-
+        file_name = saveOdomDirectory +   "/odometry.yaml";
         allocateMemory();
     }
 
@@ -1633,9 +1638,77 @@ public:
         globalPath.poses.push_back(pose_stamped);
     }
 
+    void saveOdom(nav_msgs::msg::Odometry &odom){
+        // Convert the odometry data to a YAML node
+        YAML::Emitter out;
+        out << YAML::BeginMap;
+        out << YAML::Key << "header";
+        out << YAML::BeginMap;
+        out << YAML::Key << "sec" << YAML::Value << odom.header.stamp.sec; // seconds part
+        out << YAML::Key << "nanosec" << YAML::Value << odom.header.stamp.nanosec; // nanoseconds part
+        out << YAML::EndMap; // End stamp
+        out << YAML::Key << "frame_id" << YAML::Value << odom.header.frame_id;
+        out << YAML::EndMap; // End header
+
+        out << YAML::Key << "child_frame_id" << YAML::Value << "odom_mapping";
+
+        out << YAML::Key << "pose";
+        out << YAML::BeginMap;
+        out << YAML::Key << "position";
+        out << YAML::BeginMap;
+        out << YAML::Key << "x" << YAML::Value << odom.pose.pose.position.x;
+        out << YAML::Key << "y" << YAML::Value << odom.pose.pose.position.y;
+        out << YAML::Key << "z" << YAML::Value << odom.pose.pose.position.z;
+        out << YAML::EndMap; // End position
+
+        out << YAML::Key << "orientation";
+        out << YAML::BeginMap;
+        out << YAML::Key << "x" << YAML::Value << odom.pose.pose.orientation.x;
+        out << YAML::Key << "y" << YAML::Value << odom.pose.pose.orientation.y;
+        out << YAML::Key << "z" << YAML::Value << odom.pose.pose.orientation.z;
+        out << YAML::Key << "w" << YAML::Value << odom.pose.pose.orientation.w;
+        out << YAML::EndMap; // End orientation
+        out << YAML::EndMap; // End pose
+
+        out << YAML::EndMap; // End of the YAML map
+
+        // Write to file
+        std::ofstream fout(file_name);
+        fout << out.c_str();
+        fout.close();
+    }
+
+
+    bool checkOdom(const nav_msgs::msg::Odometry &prevOdom, const nav_msgs::msg::Odometry &currentOdom, double positionThreshold, double angleThreshold) {
+        // Calculate the position difference
+        double dx = currentOdom.pose.pose.position.x - prevOdom.pose.pose.position.x;
+        double dy = currentOdom.pose.pose.position.y - prevOdom.pose.pose.position.y;
+        double distance = std::sqrt(dx * dx + dy * dy);
+
+        // Check if the distance is more than the threshold
+        if (distance > positionThreshold) {
+            return false;
+        }
+
+        // Calculate the orientation difference using quaternion angle
+        tf2::Quaternion quatPrev, quatCurrent;
+        tf2::fromMsg(prevOdom.pose.pose.orientation, quatPrev);
+        tf2::fromMsg(currentOdom.pose.pose.orientation, quatCurrent);
+        double angleDiff = quatPrev.angle(quatCurrent);
+
+        // Check if the orientation difference is more than the threshold
+        if (angleDiff > angleThreshold) {
+            return false;
+        }
+
+        // If both checks pass, return true
+        return true;
+    }
+
     void publishOdometry()
     {
         // Publish odometry for ROS (global)
+        static nav_msgs::msg::Odometry prevOdom;
         nav_msgs::msg::Odometry laserOdometryROS;
         laserOdometryROS.header.stamp = timeLaserInfoStamp;
         laserOdometryROS.header.frame_id = odometryFrame;
@@ -1648,7 +1721,17 @@ public:
         geometry_msgs::msg::Quaternion quat_msg;
         tf2::convert(quat_tf, quat_msg);
         laserOdometryROS.pose.pose.orientation = quat_msg;
+        saveOdom(laserOdometryROS);
+        if (!checkOdom(prevOdom, laserOdometryROS, 1.0, 10)){
+            RCLCPP_WARN(get_logger(), "\033[31mOdom is far different from the previous value\033[0m");
+            auto message_request = std::make_shared<techshare_ros_pkg2::srv::SendMsg::Request>();
+            message_request->message = "Found a jump!";
+            message_request->error = true;
+            message_client->async_send_request(message_request);
+            return;
+        }
         pubLaserOdometryGlobal->publish(laserOdometryROS);
+        prevOdom = laserOdometryROS;
 
         // Publish TF
         quat_tf.setRPY(transformTobeMapped[0], transformTobeMapped[1], transformTobeMapped[2]);

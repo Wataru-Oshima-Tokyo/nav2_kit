@@ -1,0 +1,7 @@
+image: aksk_R3.png
+resolution: 0.082
+origin: [-20.00000, -20.00000, 0.000000]
+negate: 1
+occupied_thresh: 0.65
+free_thresh: 0.196
+

@@ -19,12 +19,15 @@ class NodeMonitor(Node):
         self.catmux_dict = os.getenv("WORK_SPACE")
         self.catmux_command = os.getenv("CATMUX_COMMAND")
         self.declare_parameter('docker', False)
+        self.declare_parameter('imu_check', True)
         self.declare_parameter('sim', False)
         self.declare_parameter('work_space', None)
         self.declare_parameter('catmux_command', "diffbot_in_ts_1st")
         self.docker = self.get_parameter("docker").get_parameter_value().bool_value 
+        self.imu_check = self.get_parameter("imu_check").get_parameter_value().bool_value 
         self.sim = self.get_parameter("sim").get_parameter_value().bool_value 
         self.get_logger().info(f"docker {self.docker}")
+        self.get_logger().info(f"imu_check {self.imu_check}")
         if self.catmux_dict is None:
             self.catmux_dict = self.get_parameter('work_space').value
         if self.catmux_command is None:
@@ -75,7 +78,7 @@ class NodeMonitor(Node):
         return node_names_and_namespaces
 
     def is_all_nodes_ros_alive(self, nodes):
-        if self.sim:
+        if self.sim or not self.imu_check:
             return True
         witmotion = False
         liosam = False

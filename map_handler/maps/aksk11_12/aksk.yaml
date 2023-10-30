@@ -1,0 +1,7 @@
+image: aksk_R2-4-crop.png
+resolution: 0.082
+origin: [0.000000, 0.00000, 0.000000]
+negate: 1
+occupied_thresh: 0.65
+free_thresh: 0.196
+

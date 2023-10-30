@@ -11,7 +11,7 @@ import time
 import math
 from apriltag_msgs.msg import AprilTagDetectionArray
 from techshare_ros_pkg2.srv import SendMsg
-
+from std_srvs.srv import Empty
 
 class MarkerLcalization(Node):
     def __init__(self):
@@ -24,6 +24,8 @@ class MarkerLcalization(Node):
         use_sim_time_ = self.get_parameter("use_sim_time").get_parameter_value().bool_value 
         self.get_logger().info(f"use_sim_time {use_sim_time_}")
         self.rcs_send_msg_service = self.create_client(SendMsg, "send_msg")
+        self.emcl_tf_publish_set_service = self.create_client(Empty, "emcl_node_finish_")
+        self.emcl_tf_req = Empty.Request()
         self.req = SendMsg.Request()
         if use_sim_time_:
             self.get_logger().info('USE SIM TIME ')
@@ -75,12 +77,14 @@ class MarkerLcalization(Node):
 
             if self.transform_fetched and not self.initial_transform and len(self.pose_array) > 50:
                 # robot_position = self.compute_robot_position_on_map(transform.transform)
+                self.emcl_tf_publish_set_service.call_async(self.emcl_tf_req)
                 self.publish_transform(transform.transform)
                 self.initial_transform = True
                 self.get_logger().info('Transform obtained successfully!')
                 self.req.message = "Found the marker! Now you should see the robot on the map"
                 self.req.error = False
                 self.rcs_send_msg_service.call_async(self.req)
+                
 
 
 
@@ -94,7 +98,7 @@ class MarkerLcalization(Node):
                 self.req.error = True
                 self.rcs_send_msg_service.call_async(self.req)
             elif self.transform_fetched and not self.initial_transform and self.isPassedTime(7) and not self.isPassedTime(10):
-                self.req.message = "Cannot find the marker for 10 seconds... Please set the initial pose on GUI!"
+                self.req.message = "Cannot find the marker for 10 seconds... Please wait till the emcl node is ready..."
                 self.req.error = True
                 self.rcs_send_msg_service.call_async(self.req)
                 self.destroy_node() 

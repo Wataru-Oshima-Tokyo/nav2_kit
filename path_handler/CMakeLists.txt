@@ -23,6 +23,7 @@ set(dependencies
     nav_msgs
     nav2_msgs
     rclcpp_action
+    geometry_msgs
 )
 
 add_executable(path_handler src/path_handler.cpp)

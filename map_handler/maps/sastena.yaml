@@ -1,0 +1,7 @@
+image: sastena2301_close.png
+resolution: 0.06
+origin: [0.000000, 0.00000, 0.00000]
+negate: 1
+occupied_thresh: 0.65
+free_thresh: 0.196
+

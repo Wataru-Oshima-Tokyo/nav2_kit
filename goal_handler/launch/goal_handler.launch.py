@@ -16,13 +16,19 @@ def launch_setup(context, *args, **kwargs):
     cmd_vel_topic = "/diff_cont/cmd_vel_unstamped"
     map_name = LaunchConfiguration('map_name').perform(context)
     goal_name = map_name + "_goals.yaml"
+    share_dir = get_package_share_directory('path_handler')
+    path_file_path = os.path.join(share_dir,'path')
 
+    # Ensure the directory exists
+    if not os.path.exists(path_file_path):
+        os.makedirs(path_file_path)
 
     path_handler =  Node(
             package='path_handler',
             executable='path_handler',
             name='path_handler_node',
-            output='screen'
+            output='screen',
+            parameters=[{"trajectory_file_path": path_file_path}]
         )
 
 
