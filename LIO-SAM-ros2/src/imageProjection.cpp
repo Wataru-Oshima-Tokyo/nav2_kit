@@ -192,6 +192,7 @@ public:
             imuRotY[i] = 0;
             imuRotZ[i] = 0;
         }
+        columnIdnCountVec.assign(N_SCAN, 0);
     }
 
     ~ImageProjection(){}
@@ -592,7 +593,7 @@ public:
                 continue;
 
             int columnIdn = -1;
-            if (sensor == SensorType::VELODYNE || sensor == SensorType::OUSTER || sensor == SensorType::UNILIDAR)
+            if (sensor == SensorType::VELODYNE || sensor == SensorType::OUSTER)
             {
                 float horizonAngle = atan2(thisPoint.x, thisPoint.y) * 180 / M_PI;
                 static float ang_res_x = 360.0/float(Horizon_SCAN);
@@ -600,7 +601,7 @@ public:
                 if (columnIdn >= Horizon_SCAN)
                     columnIdn -= Horizon_SCAN;
             }
-            else if (sensor == SensorType::LIVOX )
+            else if (sensor == SensorType::LIVOX  || sensor == SensorType::UNILIDAR)
             {
                 columnIdn = columnIdnCountVec[rowIdn];
                 columnIdnCountVec[rowIdn] += 1;

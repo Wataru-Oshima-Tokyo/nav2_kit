@@ -1,0 +1,15 @@
+---
+common:
+  default_window: lio_sam
+parameters:
+  param_file: unilidar_param
+  rviz_file: 
+windows:
+  - name: unlidar_start
+    commands:
+      # - sudo chmod 666 /dev/ttyUSB0
+      - ros2 launch unitree_lidar_ros2 launch.py
+  - name: lio_sam
+    commands:
+    # - sudo chmod 666 /dev/ttyUSB0
+    - ros2 launch lio_sam run.launch.py lio_parameter_file:=${param_file}
