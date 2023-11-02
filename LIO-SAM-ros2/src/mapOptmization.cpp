@@ -1724,11 +1724,11 @@ public:
         saveOdom(laserOdometryROS);
         if (!checkOdom(prevOdom, laserOdometryROS, 1.0, 10)){
             RCLCPP_WARN(get_logger(), "\033[31mOdom is far different from the previous value\033[0m");
-            auto message_request = std::make_shared<techshare_ros_pkg2::srv::SendMsg::Request>();
-            message_request->message = "Found a jump!";
-            message_request->error = true;
-            message_client->async_send_request(message_request);
-            return;
+            // auto message_request = std::make_shared<techshare_ros_pkg2::srv::SendMsg::Request>();
+            // message_request->message = "Found a jump!";
+            // message_request->error = true;
+            // message_client->async_send_request(message_request);
+            // return;
         }
         pubLaserOdometryGlobal->publish(laserOdometryROS);
         prevOdom = laserOdometryROS;
