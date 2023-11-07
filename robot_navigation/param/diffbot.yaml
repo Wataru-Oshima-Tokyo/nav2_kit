@@ -37,7 +37,7 @@ amcl:
     z_max: 0.05
     z_rand: 0.5
     z_short: 0.05
-    scan_topic: /scan_for_amcl
+    scan_topic: /scan
     set_initial_pose: true
     initial_pose:
      x: 29.683
