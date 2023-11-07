@@ -53,7 +53,7 @@ private:
 
         for (int i = index_min; i < index_max; i++)
         {   
-            if (ranges[i] < 1.0){
+            if (ranges[i] < 1.0 && i >= index_min_slowdown && i <= index_max_slowdown){
                 obstacle_count[0]++;
                 if(obstacle_count[0] > count_threshold)
                     break;
