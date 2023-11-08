@@ -10,9 +10,19 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(techshare_ros_pkg2 REQUIRED)
 
 add_executable(occupied_grid_publisher src/occupied_grid_publisher.cpp)
-ament_target_dependencies(occupied_grid_publisher rclcpp nav_msgs geometry_msgs)
+
+# It's important to place this after the custom message generation
+ament_target_dependencies(occupied_grid_publisher
+  rclcpp
+  nav_msgs
+  geometry_msgs
+  techshare_ros_pkg2
+)
+
+# You should depend on the message generation before building the executable
 
 install(TARGETS
   occupied_grid_publisher

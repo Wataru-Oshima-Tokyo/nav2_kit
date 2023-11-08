@@ -37,6 +37,12 @@ def launch_setup(context, *args, **kwargs):
             arguments=['0', '0', '0', '0', '0', '0', '1', 'world', 'map']
     )
     
+    occupied_cell_node = Node(
+            package='occupied_grid_publisher',
+            executable='occupied_grid_publisher',
+            name='occupied_grid_publisher',
+            output="screen"
+    )
 
     lio_sam_nodes = GroupAction(
         actions=[
@@ -89,7 +95,8 @@ def launch_setup(context, *args, **kwargs):
     return [
         static_world_to_map_node,
         delayed_lio_sam_server,
-        delayed_fake_odom
+        delayed_fake_odom,
+        occupied_cell_node
     ]
 
 def generate_launch_description():
