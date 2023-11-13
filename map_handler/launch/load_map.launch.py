@@ -56,17 +56,11 @@ def launch_setup(context, *args, **kwargs):
                         {'bond_timeout': 0.0},
                         {'node_names': ['map_server']}]
         )
-    initial_pose_setter_node = Node(
-        package='map_handler',
-        executable='init_pose_setter',
-        name='init_pose_setter_node',
-        output='screen'
-    )
+
     return [
         map_handler,
         map_server_node,
-        map_life_cycle_node,
-        initial_pose_setter_node
+        map_life_cycle_node
     ]
 
 

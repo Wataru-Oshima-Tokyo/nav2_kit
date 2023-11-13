@@ -1690,16 +1690,16 @@ public:
             return false;
         }
 
-        // Calculate the orientation difference using quaternion angle
-        tf2::Quaternion quatPrev, quatCurrent;
-        tf2::fromMsg(prevOdom.pose.pose.orientation, quatPrev);
-        tf2::fromMsg(currentOdom.pose.pose.orientation, quatCurrent);
-        double angleDiff = quatPrev.angle(quatCurrent);
+        // // Calculate the orientation difference using quaternion angle
+        // tf2::Quaternion quatPrev, quatCurrent;
+        // tf2::fromMsg(prevOdom.pose.pose.orientation, quatPrev);
+        // tf2::fromMsg(currentOdom.pose.pose.orientation, quatCurrent);
+        // double angleDiff = quatPrev.angle(quatCurrent);
 
-        // Check if the orientation difference is more than the threshold
-        if (angleDiff > angleThreshold) {
-            return false;
-        }
+        // // Check if the orientation difference is more than the threshold
+        // if (angleDiff > angleThreshold) {
+        //     return false;
+        // }
 
         // If both checks pass, return true
         return true;
@@ -1720,18 +1720,22 @@ public:
         quat_tf.setRPY(transformTobeMapped[0], transformTobeMapped[1], transformTobeMapped[2]);
         geometry_msgs::msg::Quaternion quat_msg;
         tf2::convert(quat_tf, quat_msg);
-        laserOdometryROS.pose.pose.orientation = quat_msg;
-        saveOdom(laserOdometryROS);
-        if (!checkOdom(prevOdom, laserOdometryROS, 1.0, 10)){
+        laserOdometryROS.pose.pose.orientation = quat_msg;        
+        if (!checkOdom(prevOdom, laserOdometryROS, 3.0, 10)){
             RCLCPP_WARN(get_logger(), "\033[31mOdom is far different from the previous value\033[0m");
             // auto message_request = std::make_shared<techshare_ros_pkg2::srv::SendMsg::Request>();
             // message_request->message = "Found a jump!";
             // message_request->error = true;
             // message_client->async_send_request(message_request);
             // return;
+            prevOdom.header.stamp = timeLaserInfoStamp;;
+            pubLaserOdometryGlobal->publish(prevOdom);
+        }else{
+            pubLaserOdometryGlobal->publish(laserOdometryROS);
+            prevOdom = laserOdometryROS;
+            saveOdom(laserOdometryROS);
         }
-        pubLaserOdometryGlobal->publish(laserOdometryROS);
-        prevOdom = laserOdometryROS;
+
 
         // Publish TF
         quat_tf.setRPY(transformTobeMapped[0], transformTobeMapped[1], transformTobeMapped[2]);
