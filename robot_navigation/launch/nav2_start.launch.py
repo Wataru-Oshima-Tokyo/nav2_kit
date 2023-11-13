@@ -24,11 +24,11 @@ def launch_setup(context, *args, **kwargs):
     print('ROS 2 Distro:', ros2_distro)
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     map_name = LaunchConfiguration('map_name').perform(context)
-    robot_name = LaunchConfiguration('robot_name').perform(context)
-    param_file = robot_name +".yaml"
+    # param_file = map_name +"_nav.yaml"
+    param_file = "diffbot.yaml"
     param_dir = os.path.join(get_package_share_directory(
         'robot_navigation'), 'param', param_file)
-    map_file = os.path.join(get_package_share_directory('sim_worlds2'),
+    map_file = os.path.join(get_package_share_directory('map_handler'),
         'maps',
          map_name)          
     nav_to_pose_xml = os.path.join(get_package_share_directory(
@@ -38,9 +38,8 @@ def launch_setup(context, *args, **kwargs):
 
 
     param_substitutions = {
-        'use_sim_time': use_sim_time,
-        'default_bt_xml_filename': nav_to_pose_xml,
-        'map_subscribe_transient_local': nav_thr_pose_xml}
+        'default_nav_to_pose_bt_xml': nav_to_pose_xml,
+        'default_nav_through_poses_bt_xml': nav_thr_pose_xml}
 
     configured_params = RewrittenYaml(
             source_file=param_dir,
@@ -65,14 +64,15 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
-    map_name_arg = DeclareLaunchArgument('map_name', default_value='akskR3.yaml', description='Name of the map')
-    robot_name_arg = DeclareLaunchArgument('robot_name', default_value='diffbot', description='Name of the robot')
-    rviz_arg = DeclareLaunchArgument('rviz', default_value='false', description='whether to use rviz')
-
+    map_name_arg = DeclareLaunchArgument('map_name', default_value='aksk.yaml', description='Name of the map')
+    sim_declare =  DeclareLaunchArgument(
+            name='use_sim_time', 
+            default_value='true',
+            description='Enable use_sime_time to true'
+    )
     return LaunchDescription([
         map_name_arg,
-        robot_name_arg,
-        rviz_arg,
+        sim_declare,
         OpaqueFunction(function=launch_setup)
 
     ])

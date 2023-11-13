@@ -81,7 +81,6 @@ def launch_setup(context, *args, **kwargs):
                 parameters=[emcl_param_file],
                 output='screen'
         )
-
     initial_pose_setter_node = Node(
         package='map_handler',
         executable='init_pose_setter',

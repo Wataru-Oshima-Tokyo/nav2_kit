@@ -54,8 +54,6 @@ class MarkerLcalization(Node):
                 # Set the flag to True after successfully fetching the transform
                 self.transform_fetched = True
                 self.now = time.time()
-                # Use the transform as required
-                # ... [your code here] ...
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
                 self.get_logger().error('Error looking up transform: %s' % e)
 
@@ -73,7 +71,7 @@ class MarkerLcalization(Node):
             # Set the flag to True after successfully fetching the transform
             self.pose_array.append(transform)
             if len(self.pose_array) < 50:
-                self.get_logger().info('The numbe of pose array is : %d' %len(self.pose_array) )
+                self.get_logger().info('The number of pose array is : %d' %len(self.pose_array) )
 
             if self.transform_fetched and not self.initial_transform and len(self.pose_array) > 50:
                 # robot_position = self.compute_robot_position_on_map(transform.transform)
@@ -84,11 +82,6 @@ class MarkerLcalization(Node):
                 self.req.message = "Found the marker! Now you should see the robot on the map"
                 self.req.error = False
                 self.rcs_send_msg_service.call_async(self.req)
-                
-
-
-
-
             # Use the transform as required
             # ... [your code here] ...
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
