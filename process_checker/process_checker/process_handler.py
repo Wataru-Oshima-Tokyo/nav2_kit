@@ -69,13 +69,29 @@ class NodeMonitor(Node):
             self.rcs_send_msg_service.call_async(req)
             time.sleep(1)
             self.startAction()  
-        elif self.isPassedTime(5) and not self.isPassedTime(7) and self.started:
+        elif self.isPassedTime(5) and self.started and self.checkSomeNodes(node_names_and_namespaces):
             req = SendMsg.Request()
             req.message = "Succeded to run all the nodes"
             req.error = False
             self.rcs_send_msg_service.call_async(req)
 
         return node_names_and_namespaces
+
+    def checkSomeNodes(self, nodes):
+        map_server = False
+        liosam = False
+        emcl2 = False
+        for node_name, namespace in nodes:
+            if 'emcl2' in node_name:
+                emcl2=True
+            if 'lio_sam_imuPreintegration' in node_name:  # Adjust this check as per the exact name of your node
+                liosam=True
+            if 'map_server' in node_name:  # Adjust this check as per the exact name of your node
+                map_server=True
+        if emcl2 and liosam and map_server:
+            return True
+        return False
+
 
     def is_all_nodes_ros_alive(self, nodes):
         if self.sim or not self.imu_check:
