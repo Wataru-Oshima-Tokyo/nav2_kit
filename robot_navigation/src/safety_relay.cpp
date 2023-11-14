@@ -34,8 +34,11 @@ public:
         if (use_sim_time_)
         {
             this->set_parameter(rclcpp::Parameter("use_sim_time", true));
+            max_vel = 1.5;
+        }else{
+            max_vel = 0.8;
         }
-
+        
     }
 
 private:
@@ -43,59 +46,83 @@ private:
     {
         auto ranges = msg->ranges;
         // assumed the scan is already filtered here from -30 to 30 (-math.pi/6 < theta < math.pi/6)
-        bool scan_checker = false;
-        
+        int obstacle_count[4] = {0,0,0,0};
+        // obstacle_count[0] : counter for "Stop"
+        // obstacle_count[1] : counter for "Slow down a little bit"
+        // obstacle_count[2] : counter for "Just be careful"
+        // obstacle_count[3] : counter for "obstacle detection speed"
+       
+
+
         for (int i = index_min; i < index_max; i++)
         {   
-            if ((ranges[i] < 1.0 && i >= index_min_slowdown && i <= index_max_slowdown) || 
-                (backup && ranges[i] < 1.0 )){
-                twist.linear.x = - 0.2;
-                RCLCPP_WARN(this->get_logger(), "Back up ");
-                scan_checker = true;
-                backup = true;
-                break;
-            }
-            else if (ranges[i] < 1.0){
-                twist.linear.x = 0.0;
-                RCLCPP_WARN(this->get_logger(), "Stop");
-                scan_checker = true;
-                backup = false;
-                break;
+            if (ranges[i] < 1.0 && i >= index_min_slowdown && i <= index_max_slowdown){
+                obstacle_count[0]++;
+                if(obstacle_count[0] > count_threshold)
+                    break;
             }
             else if (ranges[i] < 2.0 && i >= index_min_slowdown && i <= index_max_slowdown){
-                twist.linear.x = 0.2;
-                RCLCPP_WARN(this->get_logger(), "Slow down a little bit");
-                scan_checker = true;
-                backup = false;
-                break;
-            }else if (ranges[i] < 3.0 && i >= index_min_slowdown && i <= index_max_slowdown){
-                twist.linear.x = 0.3;
-                RCLCPP_WARN(this->get_logger(), "Jutst be careful");
-                scan_checker = true;
-                backup = false;
-                break;
-            } else if (ranges[i] < 4.0 && i >= index_min_slowdown && i <= index_max_slowdown){
-                twist.linear.x = 0.4;
-                RCLCPP_WARN(this->get_logger(), "obstacle detection speed");
-                scan_checker = true;
-                backup = false;
-                break;
+                obstacle_count[1]++;
+                
+            }
+            else if (ranges[i] < 3.0 && i >= index_min_slowdown && i <= index_max_slowdown){
+                obstacle_count[2]++;
+            }
+            else if (ranges[i] < 4.0 && i >= index_min_slowdown && i <= index_max_slowdown){
+                obstacle_count[3]++;
             }
         }
-        if (scan_checker) {
-            warning = true; 
-        } else {
-            warning = false;
-            backup = false;
+        if(obstacle_count[0] > count_threshold){
+            twist.linear.x = 0.0;
+            RCLCPP_WARN(this->get_logger(), "Stop");
+            warning = true;
+            
         }
+        else if(obstacle_count[1] > count_threshold){
+            twist.linear.x = 0.2;
+            RCLCPP_WARN(this->get_logger(), "Slow down a little bit");
+            warning = true;
+        }
+        else if(obstacle_count[2] > count_threshold){
+            twist.linear.x = 0.3;
+            RCLCPP_WARN(this->get_logger(), "Just be careful");
+            warning = true;
+        }
+        else if(obstacle_count[3] > count_threshold){
+            twist.linear.x = 0.4;
+            RCLCPP_WARN(this->get_logger(), "obstacle detection speed");
+            warning = true;  
+        }
+        else{
+            warning = false;
+        }
+
+    }
+
+    void clamp_velocity_to_max(double &velocity, float max_value, double &ang_vel) {
+        if (velocity > max_value) {
+            velocity = max_value;
+        }
+
+        // if(fabs(ang_vel)>0.4){
+            
+        //     // if (ang_vel>0)
+        //     //     ang_vel = 0.1;
+        //     // else
+        //     //     ang_vel = -0.1;
+        // }
     }
 
     void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
     {   
         RCLCPP_INFO(this->get_logger(), "\033[34mRecied a command\033[0m");
         twist.angular.z = msg->angular.z;
-        if(!warning || fabs(msg->linear.x) < fabs(twist.linear.x) ||  msg->linear.x < 0)
+        if(!warning || fabs(msg->linear.x) < fabs(twist.linear.x) ||  msg->linear.x < 0){
             twist.linear.x = msg->linear.x; 
+            accel += 0.001;
+        }else if (warning){
+            accel = 1.0;
+        }
 
 
         if (use_sim_time_){
@@ -108,7 +135,7 @@ private:
                     twist.angular.z = 0;
                 }
             }else if (!warning && fabs(msg->linear.x) >= 0.1){
-                twist.linear.x *= linear_coefficient;
+                twist.linear.x *= linear_coefficient * accel;
                 twist.angular.z  *= angular_coefficient;
             }else{
                 twist.linear.x *= (linear_coefficient/2) < 1 ? 1 : linear_coefficient/2;
@@ -123,7 +150,7 @@ private:
             }
         }
 
-
+        clamp_velocity_to_max(twist.linear.x, max_vel, twist.angular.z);
         cmd_vel_publisher_->publish(twist);
     }
 
@@ -146,10 +173,12 @@ private:
 
     // calculate the indices in the ranges list that correspond to the angles
     int index_min = (angle_min_deg  + angle_range) / (angle_increment * 180 / M_PI);
-    int index_max = (angle_max_deg + angle_range) / (angle_increment * 180 / M_PI);
-    bool backup = false; 
+    int index_max = (angle_max_deg + angle_range) / (angle_increment * 180 / M_PI); 
     bool warning = false;
     bool use_sim_time_ = false;
+    const  int count_threshold = 3;
+    float accel = 1.0;
+    float max_vel;
     
 };
 

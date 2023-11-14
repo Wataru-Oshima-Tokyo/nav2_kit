@@ -3,7 +3,7 @@
 
     # Topics
     pointCloudTopic: "points_raw"                   # Point cloud data
-    imuTopic: "go1_imu"                        # IMU data
+    imuTopic: "imu/data"                        # IMU data
     odomTopic: "odometry/imu"                    # IMU pre-preintegration odometry, same frequency as IMU
     gpsTopic: "odometry/gpsz"                    # GPS odometry topic from navsat, see module_navsat.launch file
 
@@ -71,7 +71,7 @@
     rotation_tollerance: 1000.0                   # radians
 
     # CPU Params
-    numberOfCores: 4                              # number of cores for mapping optimization
+    numberOfCores: 6                              # number of cores for mapping optimization
     mappingProcessInterval: 0.15                  # seconds, regulate mapping frequency
 
     # Surrounding map

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(path_handler)
+project(occupied_grid_publisher)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -10,37 +10,25 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(std_srvs REQUIRED)
-find_package(nav2_msgs REQUIRED)
-find_package(rclcpp_action REQUIRED)
-find_package(tf2_ros REQUIRED)
-find_package(tf2_geometry_msgs REQUIRED)
-find_package(tf2 REQUIRED)
+find_package(techshare_ros_pkg2 REQUIRED)
 
+add_executable(occupied_grid_publisher src/occupied_grid_publisher.cpp)
 
-set(dependencies
-    rclcpp
-    sensor_msgs
-    std_srvs 
-    nav_msgs
-    nav2_msgs
-    rclcpp_action
-    geometry_msgs
-    tf2_ros
-    tf2_geometry_msgs
-    tf2
+# It's important to place this after the custom message generation
+ament_target_dependencies(occupied_grid_publisher
+  rclcpp
+  nav_msgs
+  geometry_msgs
+  techshare_ros_pkg2
 )
 
-add_executable(path_handler src/path_handler.cpp)
-ament_target_dependencies(path_handler ${dependencies} )
+# You should depend on the message generation before building the executable
+
 install(TARGETS
-  path_handler
+  occupied_grid_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
-install(DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}
-)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
