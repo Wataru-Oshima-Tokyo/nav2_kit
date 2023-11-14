@@ -62,14 +62,14 @@ class NodeMonitor(Node):
     def discover_nodes(self):
         node_names_and_namespaces = self.get_node_names_and_namespaces()
         # self.get_logger().info('Discovered nodes: %s' % node_names_and_namespaces)
-        if self.isPassedTime(3) and self.started and not self.is_all_nodes_ros_alive(node_names_and_namespaces):
+        if self.isPassedTime(5) and self.started and not self.is_all_nodes_ros_alive(node_names_and_namespaces):
             req = SendMsg.Request()
             req.message = "Failed to find witmotion node. Restarting soon"
             req.error = True
             self.rcs_send_msg_service.call_async(req)
             time.sleep(1)
             self.startAction()  
-        elif self.isPassedTime(3) and not self.isPassedTime(7) and self.started:
+        elif self.isPassedTime(5) and not self.isPassedTime(7) and self.started:
             req = SendMsg.Request()
             req.message = "Succeded to run all the nodes"
             req.error = False
@@ -80,10 +80,16 @@ class NodeMonitor(Node):
     def is_all_nodes_ros_alive(self, nodes):
         if self.sim or not self.imu_check:
             return True
+        witmotion = False
+        liosam = False
         for node_name, namespace in nodes:
-            if not 'witmotion' in node_name and 'lio_sam_imuPreintegration' in node_name:  # Adjust this check as per the exact name of your node
-                return False
-        return True
+            if 'witmotion' in node_name:
+                witmotion=True
+            if 'lio_sam_imuPreintegration' in node_name:  # Adjust this check as per the exact name of your node
+                liosam=True
+        if liosam and witmotion:
+            return True
+        return False
 
 
 
@@ -91,6 +97,7 @@ class NodeMonitor(Node):
     def check_node_status(self):
         # This is a simplified check. In reality, you'd want to check if each node is actually responsive.
         node_names_and_namespaces = self.discover_nodes()
+        self.color_print.print_in_blue(node_names_and_namespaces)
         self.get_logger().info('All nodes are running')
 
     def kill_node(self, pid):

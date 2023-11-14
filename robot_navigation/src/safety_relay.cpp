@@ -115,7 +115,7 @@ private:
 
     void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
     {   
-
+        RCLCPP_INFO(this->get_logger(), "\033[34mRecied a command\033[0m");
         twist.angular.z = msg->angular.z;
         if(!warning || fabs(msg->linear.x) < fabs(twist.linear.x) ||  msg->linear.x < 0){
             twist.linear.x = msg->linear.x; 
