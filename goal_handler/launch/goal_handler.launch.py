@@ -15,6 +15,7 @@ def launch_setup(context, *args, **kwargs):
     goal_save_path = home_directory + "/humble_ws/src/nav2_kit/goal_handler/goals/"
     cmd_vel_topic = "/diff_cont/cmd_vel_unstamped"
     map_name = LaunchConfiguration('map_name').perform(context)
+    use_sim_time = LaunchConfiguration('sim')
     goal_name = map_name + "_goals.yaml"
     share_dir = get_package_share_directory('path_handler')
     path_file_path = os.path.join(share_dir,'path')
@@ -28,7 +29,7 @@ def launch_setup(context, *args, **kwargs):
             executable='path_handler',
             name='path_handler_node',
             output='screen',
-            parameters=[{"trajectory_file_path": path_file_path}]
+            parameters=[{"trajectory_file_path": path_file_path}, {"use_sim_time": use_sim_time}]
         )
 
 
@@ -62,11 +63,15 @@ def generate_launch_description():
             default_value='sh',
             description='Enable use_sime_time to true'
     )
-
+    sim_declare =  DeclareLaunchArgument(
+            name='sim', 
+            default_value='false',
+            description='Enable use_sime_time to true'
+    )
 
 
     return LaunchDescription([
-
+        sim_declare,
         map_name_declare,
         OpaqueFunction(function=launch_setup)
     ])
