@@ -77,6 +77,7 @@ class NodeMonitor(Node):
 
         return node_names_and_namespaces
 
+
     def is_all_nodes_ros_alive(self, nodes):
         if self.sim or not self.imu_check:
             return True
