@@ -193,8 +193,8 @@ global_costmap:
         scan:
           topic: /scan_for_move
           max_obstacle_height: 3.0
-          clearing: False
-          marking: False
+          clearing: True
+          marking: True
           data_type: "LaserScan"
           raytrace_max_range: 5.0
           raytrace_min_range: 0.0
