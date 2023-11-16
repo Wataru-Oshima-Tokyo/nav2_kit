@@ -62,18 +62,20 @@ class NodeMonitor(Node):
     def discover_nodes(self):
         node_names_and_namespaces = self.get_node_names_and_namespaces()
         # self.get_logger().info('Discovered nodes: %s' % node_names_and_namespaces)
-        if self.isPassedTime(5) and self.started and not self.is_all_nodes_ros_alive(node_names_and_namespaces):
-            req = SendMsg.Request()
-            req.message = "Failed to find witmotion node. Restarting soon"
-            req.error = True
-            self.rcs_send_msg_service.call_async(req)
-            time.sleep(1)
-            self.startAction()  
-        elif self.isPassedTime(5) and self.started and self.checkSomeNodes(node_names_and_namespaces):
-            req = SendMsg.Request()
-            req.message = "Succeded to run all the nodes"
-            req.error = False
-            self.rcs_send_msg_service.call_async(req)
+        if self.started:
+            checkNodes = self.checkSomeNodes(node_names_and_namespaces)
+            if self.isPassedTime(7) and checkNodes and not self.isPassedTime(10):
+                req = SendMsg.Request()
+                req.message = "Succeded to run all the nodes"
+                req.error = False
+                self.rcs_send_msg_service.call_async(req)
+            if self.isPassedTime(10) and checkNodes and not self.is_all_nodes_ros_alive(node_names_and_namespaces):
+                req = SendMsg.Request()
+                req.message = "Failed to find witmotion node. Restarting soon"
+                req.error = True
+                self.rcs_send_msg_service.call_async(req)
+                time.sleep(1)
+                self.startAction()  
 
         return node_names_and_namespaces
 
@@ -147,7 +149,7 @@ class NodeMonitor(Node):
     def startAction(self):
         if self.started:
             self.killAll()
-            time.sleep(2)
+            time.sleep(5)
         self.startAll()
 
     def handle_startall(self, request, response):
