@@ -79,6 +79,7 @@ class NodeMonitor(Node):
 
         return node_names_and_namespaces
 
+
     def checkSomeNodes(self, nodes):
         map_server = False
         liosam = False
