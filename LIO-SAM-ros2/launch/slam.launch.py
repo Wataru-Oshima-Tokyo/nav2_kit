@@ -24,8 +24,7 @@ def launch_setup(context, *args, **kwargs):
         name='fake_base_link',
             parameters=[{'parent_link': "velodyne"},
                         {'child_link': "base_link"},
-                        {"use_sim_time": use_sim_time}]
-        
+                        {"use_sim_time": use_sim_time}]    
     )
 
 

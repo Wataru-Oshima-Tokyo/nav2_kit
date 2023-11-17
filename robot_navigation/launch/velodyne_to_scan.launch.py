@@ -14,6 +14,22 @@ def generate_launch_description():
         'min_height_for_move',
         default_value="-0.1",
         description='Top-level namespace')
+
+
+    # sim_ = LaunchConfiguration('use_sim_time')
+    # use_sim_time_arg = DeclareLaunchArgument(
+    #     'use_sim_time',
+    #     default_value="False",
+    #     description='use_sim_time')
+    # if sim_ == "true" or sim_ ==  "True":
+    #     use_sim_time_ = True
+    # else:
+    #     use_sim_time_ = False
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='False',
+        description='Whether to use simulation time or not'
+    )
     theta_min_deg = -60
     theta_max_deg = 60
 
@@ -21,6 +37,7 @@ def generate_launch_description():
     theta_max_rad = theta_max_deg * math.pi / 180
     return LaunchDescription([
         min_height_for_move_arg,
+        use_sim_time_arg,
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
@@ -43,7 +60,9 @@ def generate_launch_description():
                 'range_min': 0.1,
                 'range_max': 120.0,
                 'use_inf': False,
-                'inf_epsilon': 4.0
+                'inf_epsilon': 4.0,
+                'qos': "reliable",
+                'use_sim_time': LaunchConfiguration('use_sim_time'),
             }],
             name='pointcloud_to_laserscan'
         ),
@@ -63,7 +82,10 @@ def generate_launch_description():
                 'range_min': 0.1,
                 'range_max': 7.0,
                 'use_inf': False,
-                'inf_epsilon': 4.0
+                'inf_epsilon': 4.0,
+                'qos': "reliable",
+                'use_sim_time': LaunchConfiguration('use_sim_time'),
+
             }],
             name='pointcloud_to_laserscan_for_move'
         ),
