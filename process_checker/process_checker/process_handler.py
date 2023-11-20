@@ -49,6 +49,7 @@ class NodeMonitor(Node):
         if os.path.exists(self.catmux_dict) and os.path.isdir(self.catmux_dict):
             self.color_print.print_in_green("YOU CAN HANDLE CATMUX COMMAND")
         self.started = False
+        self.initial_success = False
         self.now = time.time()
 
     def isPassedTime(self, duration):
@@ -62,20 +63,19 @@ class NodeMonitor(Node):
     def discover_nodes(self):
         node_names_and_namespaces = self.get_node_names_and_namespaces()
         # self.get_logger().info('Discovered nodes: %s' % node_names_and_namespaces)
-        if self.started:
-            checkNodes = self.checkSomeNodes(node_names_and_namespaces)
-            if self.isPassedTime(7) and checkNodes and not self.isPassedTime(10):
-                req = SendMsg.Request()
-                req.message = "Succeded to run all the nodes"
-                req.error = False
-                self.rcs_send_msg_service.call_async(req)
-            if self.isPassedTime(10) and checkNodes and not self.is_all_nodes_ros_alive(node_names_and_namespaces):
-                req = SendMsg.Request()
-                req.message = "Failed to find witmotion node. Restarting soon"
-                req.error = True
-                self.rcs_send_msg_service.call_async(req)
-                time.sleep(1)
-                self.startAction()  
+        if self.isPassedTime(5) and self.started and not self.is_all_nodes_ros_alive(node_names_and_namespaces):
+            req = SendMsg.Request()
+            req.message = "Failed to find witmotion node. Restarting soon"
+            req.error = True
+            self.rcs_send_msg_service.call_async(req)
+            time.sleep(1)
+            self.startAction()  
+        elif self.isPassedTime(5) and self.started and self.checkSomeNodes(node_names_and_namespaces) and not self.initial_success:
+            req = SendMsg.Request()
+            req.message = "Succeded to run all the nodes"
+            req.error = False
+            self.rcs_send_msg_service.call_async(req)
+            self.initial_success = True
 
         return node_names_and_namespaces
 
@@ -179,6 +179,7 @@ class NodeMonitor(Node):
             req.message = "Killed all the processes"
             req.error = False
             self.rcs_send_msg_service.call_async(req)
+            self.initial_success = False
         except subprocess.CalledProcessError:
             self.color_print.print_in_yellow("failed to execute it")
             
