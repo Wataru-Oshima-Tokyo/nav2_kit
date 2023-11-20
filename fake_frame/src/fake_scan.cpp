@@ -19,7 +19,8 @@ public:
         std::string fake_topic = "/fake/" + target_topic;
         publisher_ = this->create_publisher<sensor_msgs::msg::LaserScan>(fake_topic, 10);
         subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-            target_topic, 10,
+            target_topic, 
+            rclcpp::QoS(10).best_effort(),  // Set history depth and QoS to Best Effort
             std::bind(&FakeScan::callback, this, std::placeholders::_1));
         fake_frame_id_ = "fake_laser";
         broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
@@ -30,6 +31,7 @@ public:
 private:
     void callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
     {
+        RCLCPP_WARN(this->get_logger(), "Received scan topic");
         last_scan_ = *msg; // Store the incoming scan data
 
     }
