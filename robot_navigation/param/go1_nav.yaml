@@ -3,7 +3,7 @@ bt_navigator:
     use_sim_time: true
     global_frame: world
     robot_base_frame: velodyne
-    odom_topic: /lio_sam/mapping/odometry #odom
+    odom_topic: /odometry/imu #odom
     bt_loop_duration: 10
     default_server_timeout: 20
     # if you want to user your custom behavior tree goal, please put the absolute path here
@@ -86,8 +86,8 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.15 #0.25
-      yaw_goal_tolerance: 0.15 #0.25
+      xy_goal_tolerance: 0.25
+      yaw_goal_tolerance: 0.25
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
       desired_linear_vel: 0.5
@@ -193,8 +193,9 @@ global_costmap:
         scan:
           topic: /scan_for_move
           max_obstacle_height: 3.0
-          clearing: False
-          marking: False
+          min_obstacle_height: -0.1
+          clearing: True
+          marking: True
           data_type: "LaserScan"
           raytrace_max_range: 5.0
           raytrace_min_range: 0.0
