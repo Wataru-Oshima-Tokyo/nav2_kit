@@ -27,6 +27,12 @@ def launch_setup(context, *args, **kwargs):
                         {"use_sim_time": use_sim_time}]    
     )
 
+    fake_scane_move = Node(
+        package='fake_frame',
+        executable='fake_scan',
+        name='fake_base_link',
+            parameters=[{'target_topic': "scan_for_move"}]    
+    )
 
 
     static_world_to_map_node =  Node(
@@ -36,6 +42,12 @@ def launch_setup(context, *args, **kwargs):
             arguments=['0', '0', '0', '0', '0', '0', '1', 'world', 'map']
     )
     
+    static_base_link_to_fake_laser =  Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='base_link_to_fake_laser',
+            arguments=['0', '0', '0', '0', '0', '0', '1', 'base_link', 'fake_laser']
+    )
     occupied_cell_node = Node(
             package='occupied_grid_publisher',
             executable='occupied_grid_publisher',
@@ -95,7 +107,9 @@ def launch_setup(context, *args, **kwargs):
         static_world_to_map_node,
         delayed_lio_sam_server,
         delayed_fake_odom,
-        occupied_cell_node
+        occupied_cell_node,
+        fake_scane_move,
+        static_base_link_to_fake_laser
     ]
 
 def generate_launch_description():

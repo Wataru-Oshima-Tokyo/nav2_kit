@@ -27,6 +27,9 @@ ament_target_dependencies(fake_dynamic_tf_broadcaster rclcpp tf2_ros geometry_ms
 add_executable(fake_imu src/fake_imu.cpp)
 ament_target_dependencies(fake_imu rclcpp sensor_msgs)
 
+add_executable(fake_scan src/fake_scan.cpp)
+ament_target_dependencies(fake_scan rclcpp sensor_msgs tf2_ros geometry_msgs)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -45,6 +48,7 @@ install(TARGETS
   fake_point_clouds
   fake_dynamic_tf_broadcaster
   fake_imu
+  fake_scan
   DESTINATION lib/${PROJECT_NAME}
 )
 
