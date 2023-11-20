@@ -49,6 +49,7 @@ class NodeMonitor(Node):
         if os.path.exists(self.catmux_dict) and os.path.isdir(self.catmux_dict):
             self.color_print.print_in_green("YOU CAN HANDLE CATMUX COMMAND")
         self.started = False
+        self.initial_success = False
         self.now = time.time()
 
     def isPassedTime(self, duration):
@@ -69,11 +70,12 @@ class NodeMonitor(Node):
             self.rcs_send_msg_service.call_async(req)
             time.sleep(1)
             self.startAction()  
-        elif self.isPassedTime(5) and self.started and self.checkSomeNodes(node_names_and_namespaces):
+        elif self.isPassedTime(5) and self.started and self.checkSomeNodes(node_names_and_namespaces) and not self.initial_success:
             req = SendMsg.Request()
             req.message = "Succeded to run all the nodes"
             req.error = False
             self.rcs_send_msg_service.call_async(req)
+            self.initial_success = True
 
         return node_names_and_namespaces
 
@@ -177,6 +179,7 @@ class NodeMonitor(Node):
             req.message = "Killed all the processes"
             req.error = False
             self.rcs_send_msg_service.call_async(req)
+            self.initial_success = False
         except subprocess.CalledProcessError:
             self.color_print.print_in_yellow("failed to execute it")
             
