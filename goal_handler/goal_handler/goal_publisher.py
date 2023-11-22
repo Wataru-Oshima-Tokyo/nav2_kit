@@ -54,11 +54,11 @@ class GoalActionServer(Node):
             10)
         
 
-        self.path_subscription = self.create_subscription(
-            Path,
-            '/replay_trajectory',
-            self.path_callback,
-            10)
+        # self.path_subscription = self.create_subscription(
+        #     Path,
+        #     '/replay_trajectory',
+        #     self.path_callback,
+        #     10)
         
         self.cmd_vel_sub  # prevent unused variable warning
         self.navigation_goal = None

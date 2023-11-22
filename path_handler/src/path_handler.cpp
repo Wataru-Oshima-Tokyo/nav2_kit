@@ -23,10 +23,7 @@ public:
         }
         this->declare_parameter<std::string>("trajectory_file_path", "./");
         this->get_parameter("trajectory_file_path", file_path);
-        trajectory_subscriber_ = this->create_subscription<nav_msgs::msg::Path>(
-            "/lio_sam/mapping/path",
-            10,
-            std::bind(&PathRecorder::trajectoryCallback, this, std::placeholders::_1));
+        timer_ = this->create_wall_timer(std::chrono::milliseconds(100), std::bind(&PathRecorder::location_recorder, this));
 
         record_service_ = this->create_service<std_srvs::srv::Empty>("trajectory_record_start", 
             std::bind(&PathRecorder::record, this, _1, _2));
@@ -45,24 +42,23 @@ public:
     }
 
 private:
-    void trajectoryCallback(const nav_msgs::msg::Path::SharedPtr msg)
-    {
-        if (is_recording_ && !msg->poses.empty()) {
-            
-            
+
+
+    void location_recorder(){
+        if  (is_recording_ && get_pose()){
+            // std::lock_guard<std::mutex> lock(mutex_);   
             bool should_append = true;
-            
             if (!recorded_trajectory_.poses.empty()) {
                 // Retrieve the last pose in recorded_trajectory_
                 auto& last_pose = recorded_trajectory_.poses.back().pose;
                 
                 // Retrieve the latest pose from msg
-                auto& new_pose = msg->poses.back().pose;
+                auto& new_pose = current_pose;
 
                 // Compute the position difference
-                double dx = last_pose.position.x - new_pose.position.x;
-                double dy = last_pose.position.y - new_pose.position.y;
-                double dz = last_pose.position.z - new_pose.position.z;
+                double dx = last_pose.position.x - current_pose.pose.position.x;
+                double dy = last_pose.position.y - current_pose.pose.position.y;
+                double dz = last_pose.position.z - current_pose.pose.position.z;
 
                 double distance = sqrt(dx*dx + dy*dy + dz*dz);
 
@@ -73,8 +69,8 @@ private:
             }
 
             if (should_append) {
-                recorded_trajectory_.header.frame_id = msg->header.frame_id;
-                recorded_trajectory_.poses.push_back(msg->poses.back());  // Appending the latest pose
+                recorded_trajectory_.header.frame_id = current_pose.header.frame_id;
+                recorded_trajectory_.poses.push_back(current_pose);  // Appending the latest pose
                 RCLCPP_INFO(this->get_logger(), "\033[34mAppending to the trajectory\033[0m");
             }
         }
@@ -114,35 +110,7 @@ private:
     {
         std::string file_name = file_path + "/recorded_trajectory.txt";
         loadFromFile(file_name);
-        if (!recorded_trajectory_.poses.empty()) {
-            recorded_trajectory_.header.stamp = this->now(); // Updating the timestamp to the end of recording
-            size_t midpoint = recorded_trajectory_.poses.size() / 2;
-
-            // Create two new paths for the two halves
-            nav_msgs::msg::Path first_half, second_half;
-            first_half.header = recorded_trajectory_.header;
-            second_half.header = recorded_trajectory_.header;
-
-            for (size_t i = 0; i < midpoint; ++i) {
-                first_half.poses.push_back(recorded_trajectory_.poses[i]);
-            }
-            
-            for (size_t i = midpoint; i < recorded_trajectory_.poses.size(); ++i) {
-                second_half.poses.push_back(recorded_trajectory_.poses[i]);
-            }
-
-            // Calculate the cumulative distance of the first half
-            double distance_first_half = computePathDistance(first_half);
-            double max_speed = 1.0; // Set this to your robot's average speed in m/s
-            double estimated_time_seconds = distance_first_half / max_speed;
-
-            // Publish the two halves with a delay based on the computed time
-            trajectory_publisher_->publish(first_half);
-            std::chrono::nanoseconds estimated_time_nanoseconds(static_cast<int64_t>(estimated_time_seconds * 1e9));
-            RCLCPP_INFO(this->get_logger(), "Will wait for %lf seconds", estimated_time_seconds);
-            rclcpp::sleep_for(estimated_time_nanoseconds);
-            trajectory_publisher_->publish(second_half);
-        }
+        trajectory_publisher_->publish(recorded_trajectory_);
     }
 
     double computePathDistance(const nav_msgs::msg::Path& path) {
@@ -184,9 +152,9 @@ private:
     bool  get_pose() {
         try {
             // Replace 'now' with 'tf2::TimePointZero' if you want to get the latest available transform
-            geometry_msgs::msg::TransformStamped transformStamped = tf_buffer_.lookupTransform("odom", "base_link", this->get_clock()->now(), rclcpp::Duration::from_seconds(1.0)); 
+            geometry_msgs::msg::TransformStamped transformStamped = tf_buffer_.lookupTransform("map", "base_link", this->get_clock()->now(), rclcpp::Duration::from_seconds(1.0)); 
             current_pose.header.stamp = transformStamped.header.stamp;
-            current_pose.header.frame_id = "odom";
+            current_pose.header.frame_id = "map";
             current_pose.pose.position.x = transformStamped.transform.translation.x;
             current_pose.pose.position.y = transformStamped.transform.translation.y;
             current_pose.pose.position.z = transformStamped.transform.translation.z;
@@ -243,7 +211,6 @@ private:
 
 
 
-    rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr trajectory_subscriber_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr trajectory_publisher_;
 
     rclcpp::Service<std_srvs::srv::Empty>::SharedPtr record_service_;
@@ -252,12 +219,14 @@ private:
     rclcpp::Service<std_srvs::srv::Empty>::SharedPtr start_service_;
 
     nav_msgs::msg::Path recorded_trajectory_;
+    rclcpp::TimerBase::SharedPtr timer_;
     std::string file_path;
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
     geometry_msgs::msg::PoseStamped current_pose;
     bool is_recording_ = false;
     bool use_sim_time_;
+    std::mutex mutex_;
 };
 
 int main(int argc, char **argv)

@@ -3,7 +3,7 @@ bt_navigator:
     use_sim_time: true
     global_frame: world
     robot_base_frame: velodyne
-    odom_topic: /lio_sam/mapping/odometry #odom
+    odom_topic: /odometry/imu #odom
     bt_loop_duration: 10
     default_server_timeout: 20
     # if you want to user your custom behavior tree goal, please put the absolute path here

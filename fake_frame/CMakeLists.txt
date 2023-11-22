@@ -10,19 +10,21 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 add_executable(fake_odom_broadcaster src/fake_odom_broadcaster.cpp)
-ament_target_dependencies(fake_odom_broadcaster rclcpp tf2 tf2_ros geometry_msgs)
+ament_target_dependencies(fake_odom_broadcaster rclcpp tf2 tf2_ros geometry_msgs nav_msgs )
 
 add_executable(fake_point_clouds src/fake_point_clouds.cpp)
 ament_target_dependencies(fake_point_clouds rclcpp sensor_msgs)
 
 add_executable(fake_dynamic_tf_broadcaster src/fake_dynamic_tf_broadcaster.cpp)
-ament_target_dependencies(fake_dynamic_tf_broadcaster rclcpp tf2_ros geometry_msgs)
+ament_target_dependencies(fake_dynamic_tf_broadcaster rclcpp tf2 tf2_ros geometry_msgs nav_msgs tf2_geometry_msgs)
 
 add_executable(fake_imu src/fake_imu.cpp)
 ament_target_dependencies(fake_imu rclcpp sensor_msgs)
