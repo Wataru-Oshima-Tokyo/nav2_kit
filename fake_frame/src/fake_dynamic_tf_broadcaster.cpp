@@ -44,13 +44,8 @@ private:
         t->child_frame_id = child_link;
         t->transform.translation.x = 0.0;
         t->transform.translation.y = 0.0;
-        if (initialized_){
-            std::lock_guard<std::mutex> lock(mutex_);   
-            t->transform.translation.z = position_z;
-        }else{
-            t->transform.translation.z = 0.0;
-        }
-        t->transform.rotation.x = 0.0;
+        t->transform.translation.z = 0.0;
+	t->transform.rotation.x = 0.0;
         t->transform.rotation.y = 0.0;
         t->transform.rotation.z = 0.0;
         t->transform.rotation.w = 1.0;
