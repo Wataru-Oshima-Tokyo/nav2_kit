@@ -34,9 +34,9 @@ public:
         if (use_sim_time_)
         {
             this->set_parameter(rclcpp::Parameter("use_sim_time", true));
-            max_vel = 1.5;
+            max_vel = 1.5 * linear_coefficient;
         }else{
-            max_vel = 0.8;
+            max_vel = 0.8 * linear_coefficient;
         }
         
     }
@@ -139,7 +139,7 @@ private:
                 twist.angular.z  *= angular_coefficient;
             }else{
                 twist.linear.x *= (linear_coefficient/2) < 1 ? 1 : linear_coefficient/2;
-                twist.angular.z *= (angular_coefficient/2) < 1 ? 1 : angular_coefficient/2;
+                twist.angular.z *= angular_coefficient; //(angular_coefficient/2) < 1 ? 1 : angular_coefficient/2;
             }
         }else{
             if (fabs(twist.angular.z) < 0.2 && fabs(twist.linear.x) <= 0.01){
