@@ -3,6 +3,8 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include <random>
+#include "std_srvs/srv/set_bool.hpp"
+
 class SafetyRelay : public rclcpp::Node
 {
 public:
@@ -19,7 +21,9 @@ public:
         this->get_parameter("cmd_vel_topic", cmd_vel_topic);
         this->get_parameter("linear_coefficient", linear_coefficient);
         this->get_parameter("angular_coefficient", angular_coefficient);
-        
+        collision_detection_service_ = this->create_service<std_srvs::srv::SetBool>(
+            "toggle_collision_detection",
+            std::bind(&SafetyRelay::handle_collision_detection_toggle, this, std::placeholders::_1, std::placeholders::_2));
         // 3. Initialize the publisher using the retrieved topic name
         cmd_vel_publisher_  = this->create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic, 10);
         
@@ -42,6 +46,18 @@ public:
     }
 
 private:
+
+    // Service callback to toggle collision detection
+    void handle_collision_detection_toggle(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+                                           std::shared_ptr<std_srvs::srv::SetBool::Response> response)
+    {
+        collision_detection_enabled_ = request->data;
+        warning = request->data;
+        response->success = true;
+        response->message = "Collision detection " + std::string(collision_detection_enabled_ ? "enabled" : "disabled");
+        RCLCPP_INFO(this->get_logger(), "%s", response->message.c_str());
+    }
+
     void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
     {
         auto ranges = msg->ranges;
@@ -72,30 +88,33 @@ private:
                 obstacle_count[3]++;
             }
         }
-        if(obstacle_count[0] > count_threshold){
-            twist.linear.x = 0.0;
-            RCLCPP_WARN(this->get_logger(), "Stop");
-            warning = true;
-            
+        if (collision_detection_enabled_){
+            if(obstacle_count[0] > count_threshold){
+                twist.linear.x = 0.0;
+                RCLCPP_WARN(this->get_logger(), "Stop");
+                warning = true;
+                
+            }
+            else if(obstacle_count[1] > count_threshold){
+                twist.linear.x = 0.2;
+                RCLCPP_WARN(this->get_logger(), "Slow down a little bit");
+                warning = true;
+            }
+            else if(obstacle_count[2] > count_threshold){
+                twist.linear.x = 0.3;
+                RCLCPP_WARN(this->get_logger(), "Just be careful");
+                warning = true;
+            }
+            else if(obstacle_count[3] > count_threshold){
+                twist.linear.x = 0.4;
+                RCLCPP_WARN(this->get_logger(), "obstacle detection speed");
+                warning = true;  
+            }
+            else{
+                warning = false;
+            }
         }
-        else if(obstacle_count[1] > count_threshold){
-            twist.linear.x = 0.2;
-            RCLCPP_WARN(this->get_logger(), "Slow down a little bit");
-            warning = true;
-        }
-        else if(obstacle_count[2] > count_threshold){
-            twist.linear.x = 0.3;
-            RCLCPP_WARN(this->get_logger(), "Just be careful");
-            warning = true;
-        }
-        else if(obstacle_count[3] > count_threshold){
-            twist.linear.x = 0.4;
-            RCLCPP_WARN(this->get_logger(), "obstacle detection speed");
-            warning = true;  
-        }
-        else{
-            warning = false;
-        }
+
 
     }
 
@@ -104,13 +123,7 @@ private:
             velocity = max_value;
         }
 
-        // if(fabs(ang_vel)>0.4){
-            
-        //     // if (ang_vel>0)
-        //     //     ang_vel = 0.1;
-        //     // else
-        //     //     ang_vel = -0.1;
-        // }
+
     }
 
     void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
@@ -159,7 +172,9 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscription_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
+    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr collision_detection_service_;
     geometry_msgs::msg::Twist twist;
+    bool collision_detection_enabled_ = true;  // Initial state of collision detection
     int angle_min_deg = -30;  // minimum angle in degrees
     int angle_max_deg = 30;   // maximum angle in degrees
     double angle_increment = 0.0087;
