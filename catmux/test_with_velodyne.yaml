@@ -1,0 +1,29 @@
+---
+common:
+  default_window: tag_server
+parameters:
+  server_address: 100.121.124.74
+  robot_name: bunker_mini
+  map_name: ts_1st
+  lidar_type: velodyne
+  publish_odom: false
+  sim: false
+  camera_name: camera/color
+  cmd_vel_topic: /bunker_mini/cmd_vel
+  lio_parameter_file: hesai
+windows:
+  - name: 3dliar_start
+    commands:
+      - ros2 launch velodyne velodyne-all-nodes-VLP16-launch.py
+  - name: imu_node
+    commands:
+      - chmod 666 /dev/HWT905
+      - source /external/install/setup.bash
+      - ros2 launch witmotion_ros wt905.launch.py sim:=${sim}
+  # - name: fake_velodyne
+  #   commands: 
+  #     - ros2 launch rs_to_velodyne hesai_to_velodyne.launch.py sim:=${sim}
+  - name: lio_sam_navigation
+    commands:
+      - sleep 3
+      - ros2 launch lio_sam run.launch.py lio_parameter_file:=${lio_parameter_file} map_name:=${map_name} sim:=${sim}

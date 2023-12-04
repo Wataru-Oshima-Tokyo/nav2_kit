@@ -25,3 +25,7 @@
 	path = pointcloud_to_laserscan
 	url = https://github.com/Wataru-Oshima-Tokyo/pointcloud_to_laserscan.git
 	branch = humble
+[submodule "LIO-SAM"]
+	path = LIO-SAM
+	url = https://github.com/Wataru-Oshima-Tokyo/LIO-SAM.git
+	branch = humble
