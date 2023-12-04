@@ -44,12 +44,13 @@ private:
         t->child_frame_id = child_link;
         t->transform.translation.x = 0.0;
         t->transform.translation.y = 0.0;
-        if (initialized_){
-            std::lock_guard<std::mutex> lock(mutex_);   
-            t->transform.translation.z = position_z;
-        }else{
-            t->transform.translation.z = 0.0;
-        }
+        // if (initialized_){
+        //     std::lock_guard<std::mutex> lock(mutex_);   
+        //     // t->transform.translation.z = position_z;
+        // }else{
+        //     t->transform.translation.z = 0.0;
+        // }
+        t->transform.translation.z = 0.0;
         t->transform.rotation.x = 0.0;
         t->transform.rotation.y = 0.0;
         t->transform.rotation.z = 0.0;
@@ -77,7 +78,7 @@ private:
         // You may need to adjust the scaling factor based on your specific scenario
         double delta_z = delta_pitch * scaling_factor;
 
-        RCLCPP_INFO(this->get_logger(), "Delta Z: %f", delta_z);
+        // RCLCPP_INFO(this->get_logger(), "Delta Z: %f", delta_z);
         position_z += delta_z;
         last_pitch_ = pitch;
     }
