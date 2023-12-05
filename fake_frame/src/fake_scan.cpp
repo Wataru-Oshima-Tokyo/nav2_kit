@@ -31,7 +31,7 @@ public:
 private:
     void callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
     {
-        RCLCPP_WARN(this->get_logger(), "Received scan topic");
+        // RCLCPP_WARN(this->get_logger(), "Received scan topic");
         last_scan_ = *msg; // Store the incoming scan data
 
     }
