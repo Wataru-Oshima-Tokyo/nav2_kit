@@ -39,7 +39,7 @@ class MarkerLcalization(Node):
         self.marker_position_on_map.append(None)
 
         self.timer1 = self.create_timer(1, self.lookup_transform)  # 0.01 seconds = 10ms = 100Hz
-        self.timer2 = self.create_timer(0.1, self.run)  # 0.1 seconds = 10ms = 10Hz
+        self.timer2 = self.create_timer(0.05, self.run)  # 0.1 seconds = 10ms = 10Hz
         self.transform_fetched = False
         self.initial_transform = False
         self.now = time.time()
