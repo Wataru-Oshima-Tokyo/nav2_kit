@@ -26,7 +26,8 @@ setup(
             'imu_pose_publisher = goal_handler.imu_pose_publisher:main',
             'demo_recoveries = goal_handler.demo_recoveries:main',
             'logging_test = goal_handler.logging_test:main',
-            'path_follower = goal_handler.path_follower:main'
+            'path_follower = goal_handler.path_follower:main',
+            'imu_noise = goal_handler.imu_noise:main'
         ],
     },
 )
