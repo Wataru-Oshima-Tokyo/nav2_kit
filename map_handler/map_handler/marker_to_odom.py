@@ -11,7 +11,7 @@ import time
 import math
 from apriltag_msgs.msg import AprilTagDetectionArray
 from techshare_ros_pkg2.srv import SendMsg
-from std_srvs.srv import Empty
+from std_srvs.srv import Empty, SetBool
 
 class MarkerLcalization(Node):
     def __init__(self):
@@ -25,7 +25,9 @@ class MarkerLcalization(Node):
         self.get_logger().info(f"use_sim_time {use_sim_time_}")
         self.rcs_send_msg_service = self.create_client(SendMsg, "send_msg")
         self.emcl_tf_publish_set_service = self.create_client(Empty, "emcl_node_finish_")
+        self.emcl_send_msg_service = self.create_client(SetBool, "send_msg_service")
         self.emcl_tf_req = Empty.Request()
+        self.emcl_send_msg_req = SetBool.Request()
         self.req = SendMsg.Request()
         if use_sim_time_:
             self.get_logger().info('USE SIM TIME ')
@@ -94,6 +96,8 @@ class MarkerLcalization(Node):
                 self.req.message = "Cannot find the marker for 10 seconds... Please wait till the emcl node is ready..."
                 self.req.error = True
                 self.rcs_send_msg_service.call_async(self.req)
+                self.emcl_send_msg_req.data = True
+                self.emcl_send_msg_service.call_async(self.emcl_send_msg_req)
                 self.destroy_node() 
                 self.initial_transform = True
                 sys.exit()
