@@ -38,8 +38,10 @@ private:
         // RCLCPP_WARN(this->get_logger(), "Received scan topic");
         if (start_scanning)
             last_scan_ = *msg; // Store the incoming scan data
-        else
+        else{
             RCLCPP_WARN(this->get_logger(), "not started scanning yet...");
+            std::fill(last_scan_.ranges.begin(), last_scan_.ranges.end(), std::numeric_limits<float>::infinity());
+        }
 
     }
         // Service callback to toggle collision detection
