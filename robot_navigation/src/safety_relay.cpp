@@ -130,12 +130,22 @@ private:
     {   
         RCLCPP_INFO(this->get_logger(), "\033[34mReceived a command\033[0m");
         twist.angular.z = msg->angular.z;
-        if(!warning || fabs(msg->linear.x) < fabs(twist.linear.x) ||  msg->linear.x < 0){
-            twist.linear.x = msg->linear.x; 
-            accel += 0.001;
-        }else if (warning){
+        if (!collision_detection_enabled_){
             accel = 1.0;
+         if( fabs(msg->linear.x) <0.11 || msg->linear.x < 0){
+                twist.linear.x = msg->linear.x; 
+            }else{
+              twist.linear.x = 0.11;
+            }
+        }else{
+            if(!warning || fabs(msg->linear.x) < fabs(twist.linear.x) ||  msg->linear.x < 0){
+                twist.linear.x = msg->linear.x; 
+                accel += 0.001;
+            }else if (warning){
+                accel = 1.0;
+            }
         }
+
 
 
         if (use_sim_time_){
