@@ -29,7 +29,7 @@ public:
         
 
         scan_subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-            "/scan_for_move", rclcpp::SensorDataQoS(), std::bind(&SafetyRelay::scan_callback, this, std::placeholders::_1));
+            "/fake/scan_for_move", rclcpp::SensorDataQoS(), std::bind(&SafetyRelay::scan_callback, this, std::placeholders::_1));
         
         cmd_vel_subscription_ = this->create_subscription<geometry_msgs::msg::Twist>(
             "/cmd_vel", rclcpp::SensorDataQoS(), std::bind(&SafetyRelay::cmd_vel_callback, this, std::placeholders::_1));

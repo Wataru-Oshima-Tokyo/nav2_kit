@@ -4,6 +4,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include "std_srvs/srv/set_bool.hpp"
 
 class FakeScan : public rclcpp::Node
 {
@@ -22,6 +23,9 @@ public:
             target_topic, 
             rclcpp::QoS(10).best_effort(),  // Set history depth and QoS to Best Effort
             std::bind(&FakeScan::callback, this, std::placeholders::_1));
+        start_scanning_service_ = this->create_service<std_srvs::srv::SetBool>(
+            "toggle_scanning",
+            std::bind(&FakeScan::handle_scan_toggle, this, std::placeholders::_1, std::placeholders::_2));
         fake_frame_id_ = "fake_laser";
         broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
         timer_ = this->create_wall_timer(
@@ -32,12 +36,25 @@ private:
     void callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
     {
         // RCLCPP_WARN(this->get_logger(), "Received scan topic");
-        last_scan_ = *msg; // Store the incoming scan data
+        if (start_scanning)
+            last_scan_ = *msg; // Store the incoming scan data
+        else
+            RCLCPP_WARN(this->get_logger(), "not started scanning yet...");
 
+    }
+        // Service callback to toggle collision detection
+    void handle_scan_toggle(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+                                           std::shared_ptr<std_srvs::srv::SetBool::Response> response)
+    {
+        start_scanning = request->data;
+        response->success = true;
+        response->message = "Start scannning " + std::string(start_scanning ? "enabled" : "disabled");
+        RCLCPP_INFO(this->get_logger(), "%s", response->message.c_str());
     }
 
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr subscription_;
     rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr publisher_;
+    rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_scanning_service_;
     std::string fake_frame_id_;
     std::string target_topic;
 
@@ -65,6 +82,7 @@ private:
     }
 
     rclcpp::TimerBase::SharedPtr timer_;
+    bool start_scanning = false;  // Initial state of collision detection
     std::shared_ptr<tf2_ros::TransformBroadcaster> broadcaster_;
     tf2_ros::Buffer tfBuffer_;
     tf2_ros::TransformListener tfListener_;

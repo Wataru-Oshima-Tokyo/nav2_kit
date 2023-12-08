@@ -5,7 +5,7 @@
 #include <unordered_set>
 #include <sstream>
 #include <cmath>
-
+#include "std_srvs/srv/set_bool.hpp"
 
 class OccupiedGridPublisher : public rclcpp::Node {
 public:
@@ -14,9 +14,16 @@ public:
     // Subscriber for the occupancy grid topic.
     occupancy_grid_subscriber_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
       "global_costmap/costmap", 10, std::bind(&OccupiedGridPublisher::occupancyGridCallback, this, std::placeholders::_1));
-
+    client_ = this->create_client<std_srvs::srv::SetBool>("toggle_scanning");
+    request_ = std::make_shared<std_srvs::srv::SetBool::Request>();
     // Publisher for the occupied cells topic.
     occupied_cells_publisher_ = this->create_publisher<techshare_ros_pkg2::msg::PointArray>("occupied_cells", 10);
+    // Timer for resetting the hash map.
+    reset_timer_ = this->create_wall_timer(
+      std::chrono::seconds(5), std::bind(&OccupiedGridPublisher::resetHashMap, this));
+
+
+    
   }
 
 private:
@@ -30,10 +37,19 @@ private:
     return ss.str();
   }
 
+  void resetHashMap() {
+    occupied_cells_publisher_->publish(point_array_msg);
+    // Reset the hash map but retain the keys from the first costmap.
+    std::unordered_set<std::string> temp = first_costmap_points_;
+    published_points_.swap(temp);
+    RCLCPP_INFO(this->get_logger(), "Hash map reset, retaining first costmap points.");
+  }
+
+
   void occupancyGridCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
     // Iterate through the occupancy grid and check for occupied cells.
     size_t initial_size = published_points_.size();
-    techshare_ros_pkg2::msg::PointArray point_array_msg;
+    
     std::vector<geometry_msgs::msg::Point> points_to_publish;
     for (unsigned int i = 0; i < msg->data.size(); ++i) {
       
@@ -48,7 +64,7 @@ private:
 
         std::string key = createKey(wx, wy);
         
-        if (published_points_.find(key) == published_points_.end()) {
+        if (first_costmap_points_.find(key) == first_costmap_points_.end()) {
           // Publish the occupied cell point.
           published_points_.insert(key);
           geometry_msgs::msg::Point occupied_cell;
@@ -56,12 +72,15 @@ private:
           occupied_cell.y = wy;
           occupied_cell.z = 0.0;  // Assuming 2D, the z-coordinate is set to zero.
           points_to_publish.push_back(occupied_cell);
-          // occupied_cells_publisher_->publish(occupied_cell);
         }
       }
     }
     point_array_msg.points = points_to_publish;
-    occupied_cells_publisher_->publish(point_array_msg);
+    if (initial_costmap_flag){
+      first_costmap_points_ = published_points_;
+      send_request(true);
+      initial_costmap_flag = false;
+    }
     size_t new_points = published_points_.size() - initial_size;
     if(new_points > 0) {
       RCLCPP_INFO(this->get_logger(), "\033[1;32m---->New unique points published: %ld\033[0m", new_points);
@@ -69,11 +88,39 @@ private:
       RCLCPP_INFO(this->get_logger(), "\033[1;31m No new points\033[0m");
     }
   }
+  
+  void send_request(bool enable) {
+    request_->data = enable;
+    while (!client_->wait_for_service(std::chrono::seconds(1))) {
+      if (!rclcpp::ok()) {
+        RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
+        return;
+      }
+      RCLCPP_INFO(this->get_logger(), "Waiting for service to appear...");
+    }
+
+    auto result = client_->async_send_request(request_,
+      std::bind(&OccupiedGridPublisher::handle_response, this, std::placeholders::_1));
+  }
+  void handle_response(rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture future) {
+    auto response = future.get();
+    if (response->success) {
+      RCLCPP_INFO(this->get_logger(), "Response: %s", response->message.c_str());
+    } else {
+      RCLCPP_ERROR(this->get_logger(), "Failed to toggle collision detection");
+    }
+  }
 
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr occupancy_grid_subscriber_;
   rclcpp::Publisher<techshare_ros_pkg2::msg::PointArray>::SharedPtr occupied_cells_publisher_;
+  techshare_ros_pkg2::msg::PointArray point_array_msg;
+  rclcpp::TimerBase::SharedPtr reset_timer_;
   std::unordered_set<std::string> published_points_;
-  double threshold_ = 0.1;  // Define a threshold, for example 10 cm.
+  std::unordered_set<std::string> first_costmap_points_;
+  bool initial_costmap_flag = true;
+  double threshold_ = 0.15;  // Define a threshold, for example 10 cm.
+  rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr client_;
+  std_srvs::srv::SetBool::Request::SharedPtr request_;
 };
 
 int main(int argc, char **argv) {
