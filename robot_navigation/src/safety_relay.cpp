@@ -30,10 +30,14 @@ public:
 
         scan_subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
             "/fake/scan_for_move", rclcpp::SensorDataQoS(), std::bind(&SafetyRelay::scan_callback, this, std::placeholders::_1));
-        
+        safety_subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+            "/scan_for_safety", rclcpp::SensorDataQoS(), std::bind(&SafetyRelay::safety_callback, this, std::placeholders::_1));        
         cmd_vel_subscription_ = this->create_subscription<geometry_msgs::msg::Twist>(
             "/cmd_vel", rclcpp::SensorDataQoS(), std::bind(&SafetyRelay::cmd_vel_callback, this, std::placeholders::_1));
-        
+        odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+            "/dlio/odom_node/odom", 
+            rclcpp::QoS(10).best_effort(),  // Set history depth and QoS to Best Effort
+            std::bind(&SafetyRelay::odom_callback, this, std::placeholders::_1));
         this->get_parameter("use_sim_time", use_sim_time_);
         if (use_sim_time_)
         {
@@ -47,6 +51,18 @@ public:
 
 private:
 
+    double calculateLidarRange(double &lidar_height, double &distance_ahead, double &slope_angle) {
+        // Calculate the height difference
+        double height_diff = lidar_height * sin(slope_angle);
+
+        // Calculate the actual distance traveled
+        double actual_distance = sqrt(pow(distance_ahead, 2) + pow(height_diff, 2));
+
+        // Calculate the distance seen at the top
+        double distance_top = distance_ahead + height_diff;
+
+        return distance_top;
+    }
     // Service callback to toggle collision detection
     void handle_collision_detection_toggle(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
                                            std::shared_ptr<std_srvs::srv::SetBool::Response> response)
@@ -58,33 +74,89 @@ private:
         RCLCPP_INFO(this->get_logger(), "%s", response->message.c_str());
     }
 
+    void safety_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg){
+        static int safety_threshold = 10;
+        auto ranges = msg->ranges;
+                // Calculate index_min based on message parameters
+        int safety_stop_count = 0;
+        static double safety_angle_increment = msg->angle_increment;
+
+        // calculate the indices in the ranges list that correspond to the angles
+        static int safety_index_max = std::round(msg->angle_max / safety_angle_increment); 
+        // Reduce the range to 1/3 of the original range for more focused checking
+        static double safety_angle_min_slowdown_rad =  msg->angle_min/3;  // minimum angle for slowdown in radians
+        static double safety_angle_max_slowdown_rad = msg->angle_max/3;   // maximum angle for slowdown in radians
+        // Set the input values
+        static double lidar_height = 0.8;  // meters
+        static double distance_ahead = 1.0;  // meters
+        static double offset_ = 0.2;
+        // double abs_pitch = fabs(pitch);
+        // Calculate the distance seen at the top
+        // double check_distance = calculateLidarRange(lidar_height, distance_ahead, abs_pitch);
+        if (fabs(pitch) <0.01){
+            for (int i = 0; i < safety_index_max; i++)
+            {   if (ranges[i] >= INFINITY)
+                    continue;;
+                if (ranges[i] > (1.5) ){
+                    safety_stop_count++;
+                    if(safety_stop_count > safety_threshold)
+                        break;
+                }
+            }
+        }
+
+        if(safety_stop_count > safety_threshold){
+            RCLCPP_WARN(this->get_logger(), "\033[1;31mSafety_stop\033[0m");
+            safety_stop = true;
+        }else{
+            safety_stop = false;
+        }
+
+    }
+
+        // scan_callback to handle odometry data
+    void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+    {
+        // Extract the pitch from the odometry message
+         pitch = msg->pose.pose.orientation.x;
+
+    }
+
+
     void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
     {
+        
         auto ranges = msg->ranges;
-        // assumed the scan is already filtered here from -30 to 30 (-math.pi/6 < theta < math.pi/6)
+                // Calculate index_min based on message parameters
         int obstacle_count[4] = {0,0,0,0};
-        // obstacle_count[0] : counter for "Stop"
-        // obstacle_count[1] : counter for "Slow down a little bit"
-        // obstacle_count[2] : counter for "Just be careful"
-        // obstacle_count[3] : counter for "obstacle detection speed"
-       
+        double scan_angle_increment = msg->angle_increment;
 
+        // calculate the indices in the ranges list that correspond to the angles
+        int scan_index_min = 0;
+        int scan_index_max = std::round(msg->angle_max / scan_angle_increment); 
+        // Reduce the range to 1/3 of the original range for more focused checking
+        double scan_angle_min_slowdown_rad =  msg->angle_min/3;  // minimum angle for slowdown in radians
+        double scan_angle_max_slowdown_rad = msg->angle_max/3;   // maximum angle for slowdown in radians
+        // calculate the indices in the ranges list that correspond to the reduced range
+        int scan_index_min_slowdown = std::round((scan_angle_min_slowdown_rad  + msg->angle_max) / scan_angle_increment);
+        int scan_index_max_slowdown = std::round((scan_angle_max_slowdown_rad + msg->angle_max) / scan_angle_increment);
 
-        for (int i = index_min; i < index_max; i++)
+        for (int i = scan_index_min_slowdown; i < scan_index_max_slowdown; i++)
         {   
-            if (ranges[i] < 1.0 && i >= index_min_slowdown && i <= index_max_slowdown){
+            RCLCPP_INFO(this->get_logger(), "\033[ranges[%d] %lf\033[0m", i, ranges[i]);
+            if (ranges[i] < 1.0){
                 obstacle_count[0]++;
                 if(obstacle_count[0] > count_threshold)
                     break;
             }
-            else if (ranges[i] < 2.0 && i >= index_min_slowdown && i <= index_max_slowdown){
+            else if (ranges[i] < 2.0){
                 obstacle_count[1]++;
                 
             }
-            else if (ranges[i] < 3.0 && i >= index_min_slowdown && i <= index_max_slowdown){
+            else if (ranges[i] < 3.0){
                 obstacle_count[2]++;
             }
-            else if (ranges[i] < 4.0 && i >= index_min_slowdown && i <= index_max_slowdown){
+            else if (ranges[i] < 4.0){
                 obstacle_count[3]++;
             }
         }
@@ -128,14 +200,14 @@ private:
 
     void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
     {   
-        RCLCPP_INFO(this->get_logger(), "\033[34mReceived a command\033[0m");
+        
         twist.angular.z = msg->angular.z;
         if (!collision_detection_enabled_){
             accel = 1.0;
-            if( fabs(msg->linear.x) <0.11 || msg->linear.x < 0){
+            if( fabs(msg->linear.x) <0.15 || msg->linear.x < 0){
                 twist.linear.x = msg->linear.x; 
             }else{
-                twist.linear.x = 0.11;
+                twist.linear.x = 0.15;
             }
         }else{
             if(!warning || fabs(msg->linear.x) < fabs(twist.linear.x) ||  msg->linear.x < 0){
@@ -161,7 +233,7 @@ private:
                 twist.linear.x *= linear_coefficient * accel;
                 twist.angular.z  *= angular_coefficient;
             }else{
-                twist.linear.x *= (linear_coefficient/2) < 1 ? 1 : linear_coefficient/2;
+                twist.linear.x *= linear_coefficient; //(linear_coefficient/2) < 1 ? 1 : linear_coefficient/2;
                 twist.angular.z *= angular_coefficient; //(angular_coefficient/2) < 1 ? 1 : angular_coefficient/2;
             }
         }else{
@@ -174,36 +246,27 @@ private:
         }
 
         clamp_velocity_to_max(twist.linear.x, max_vel, twist.angular.z);
+        if (safety_stop)
+            twist.linear.x = 0.0;
         cmd_vel_publisher_->publish(twist);
     }
 
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_subscription_;
+    rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr safety_subscription_;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscription_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
-    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr collision_detection_service_;
     geometry_msgs::msg::Twist twist;
     bool collision_detection_enabled_ = true;  // Initial state of collision detection
-    int angle_min_deg = -30;  // minimum angle in degrees
-    int angle_max_deg = 30;   // maximum angle in degrees
-    double angle_increment = 0.0087;
-    int angle_range = 60;
     int linear_coefficient, angular_coefficient;
-    int angle_min_slowdown_deg = angle_min_deg/3;  // minimum angle for slowdown in degrees
-    int angle_max_slowdown_deg = angle_max_deg/3;   // maximum angle for slowdown in degrees
-    // calculate the indices in the ranges list that correspond to the slowdown angles
-    int index_min_slowdown = (angle_min_slowdown_deg  + angle_range) / (angle_increment * 180 / M_PI);
-    int index_max_slowdown = (angle_max_slowdown_deg + angle_range) / (angle_increment * 180 / M_PI);
-
-    // calculate the indices in the ranges list that correspond to the angles
-    int index_min = (angle_min_deg  + angle_range) / (angle_increment * 180 / M_PI);
-    int index_max = (angle_max_deg + angle_range) / (angle_increment * 180 / M_PI); 
+    bool safety_stop = false;
     bool warning = false;
     bool use_sim_time_ = false;
-    const  int count_threshold = 3;
+    const int count_threshold = 3;
     float accel = 1.0;
     float max_vel;
+    double pitch = 0.0;
     
 };
 
