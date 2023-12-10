@@ -11,7 +11,7 @@ class FakeScan : public rclcpp::Node
 {
 public:
     FakeScan()
-        : Node("fake_scan"), tfBuffer_(this->get_clock()), tfListener_(tfBuffer_)
+        : Node("fake_scan"), tfBuffer_(this->get_clock()), tfListener_(tfBuffer_), last_time_pitch_exceeded(this->get_clock()->now())
     {
 
 
@@ -43,9 +43,10 @@ private:
     void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
     {
         // RCLCPP_WARN(this->get_logger(), "Received scan topic");
-        if (start_scanning)
+        if (start_scanning){
             last_scan_ = *msg; // Store the incoming scan data
-        else{
+            last_time_pitch_exceeded = this->get_clock()->now();
+        }else{
             RCLCPP_WARN(this->get_logger(), "not started scanning yet...");
             std::fill(last_scan_.ranges.begin(), last_scan_.ranges.end(), std::numeric_limits<float>::infinity());
         }
@@ -57,7 +58,22 @@ private:
         // Extract the pitch from the odometry message
         double pitch = msg->pose.pose.orientation.x;
         // Log the pitch for debugging
-        RCLCPP_INFO(this->get_logger(), "Received pitch: %f", pitch);
+        
+        
+        // Check if the pitch is more than 0.2
+        if (!start_scanning){
+            if (fabs(pitch) > 0.15) {
+                // If the pitch is more than 0.2 for 2 seconds, set start_scanning to true
+                if (this->get_clock()->now() - last_time_pitch_exceeded > rclcpp::Duration(2, 0)) {
+                    RCLCPP_INFO(this->get_logger(), "\033[1;32mNow it is confirmed that the robot is climbing\033[0m");
+                    start_scanning = true;
+                }
+            } else {
+                // Reset the time when the pitch exceeded 0.2
+                RCLCPP_INFO(this->get_logger(), "Received pitch: %f", pitch);
+                last_time_pitch_exceeded = this->get_clock()->now();
+            }
+        }
     }
         // Service scan_callback to toggle collision detection
     void handle_scan_toggle(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
@@ -105,6 +121,8 @@ private:
     tf2_ros::Buffer tfBuffer_;
     tf2_ros::TransformListener tfListener_;
     sensor_msgs::msg::LaserScan last_scan_;
+    rclcpp::Time last_time_pitch_exceeded;  // Add this line
+
 };
 
 int main(int argc, char *argv[])

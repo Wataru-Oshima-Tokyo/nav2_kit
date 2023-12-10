@@ -56,6 +56,7 @@ def generate_launch_description():
         name='fake_base_link',
             parameters=[{'target_topic': "scan"}]    
     )
+
     return LaunchDescription([
         min_height_for_move_arg,
         use_sim_time_arg,
@@ -94,15 +95,15 @@ def generate_launch_description():
             parameters=[{
                 'target_frame': 'laser_link',
                 'transform_tolerance': 0.01,
-                'min_height': -1.0,
+                'min_height': -10.0,
                 'max_height': 0.0,
-                'angle_min': -math.pi,
-                'angle_max': math.pi,
+                'angle_min': -math.pi/6,
+                'angle_max': math.pi/6,
                 'angle_increment': 0.0087,  # M_PI/360.0
                 'scan_time': 0.3333,
                 'range_min': 0.1,
                 'range_max': 120.0,
-                'use_inf': False,
+                'use_inf': True,
                 'inf_epsilon': 4.0,
                 'qos': "reliable",
                 'use_sim_time': LaunchConfiguration('use_sim_time'),
