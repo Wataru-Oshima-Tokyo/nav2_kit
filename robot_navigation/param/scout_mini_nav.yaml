@@ -189,11 +189,11 @@ global_costmap:
       proxy_obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        observation_sources: scan scan_for_move 
+        observation_sources: scan scan_for_move
         scan:
           topic: /fake/scan
           max_obstacle_height: 3.0
-          min_obstacle_height: 0.5
+          # min_obstacle_height: 0.5
           clearing: True
           marking: True
           data_type: "LaserScan"
@@ -211,6 +211,11 @@ global_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 3.5
           obstacle_min_range: 0.0
+      # proxy_obstacle_layer:      
+      #   plugin: "nav2_costmap_2d::ObstacleLayer"
+      #   enabled: True
+      #   observation_sources: scan scan_for_move 
+
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
