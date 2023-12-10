@@ -132,10 +132,10 @@ private:
         twist.angular.z = msg->angular.z;
         if (!collision_detection_enabled_){
             accel = 1.0;
-            if( fabs(msg->linear.x) <0.11 || msg->linear.x < 0){
+            if( fabs(msg->linear.x) <0.15 || msg->linear.x < 0){
                 twist.linear.x = msg->linear.x; 
             }else{
-                twist.linear.x = 0.11;
+                twist.linear.x = 0.15;
             }
         }else{
             if(!warning || fabs(msg->linear.x) < fabs(twist.linear.x) ||  msg->linear.x < 0){
@@ -161,7 +161,7 @@ private:
                 twist.linear.x *= linear_coefficient * accel;
                 twist.angular.z  *= angular_coefficient;
             }else{
-                twist.linear.x *= (linear_coefficient/2) < 1 ? 1 : linear_coefficient/2;
+                twist.linear.x *= linear_coefficient; //(linear_coefficient/2) < 1 ? 1 : linear_coefficient/2;
                 twist.angular.z *= angular_coefficient; //(angular_coefficient/2) < 1 ? 1 : angular_coefficient/2;
             }
         }else{

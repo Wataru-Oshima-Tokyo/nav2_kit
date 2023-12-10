@@ -2,8 +2,8 @@ bt_navigator:
   ros__parameters:
     use_sim_time: true
     global_frame: world
-    robot_base_frame: velodyne
-    odom_topic: odometry/imu  #odometry/imu ##/ #odom
+    robot_base_frame: base_link
+    odom_topic: /dlio/odom_node/odom  #odometry/imu ##/ #odom
     bt_loop_duration: 10
     default_server_timeout: 20
     # if you want to user your custom behavior tree goal, please put the absolute path here
@@ -81,7 +81,7 @@ controller_server:
     # Progress checker parameters
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.5
+      required_movement_radius: 0.1
       movement_time_allowance: 10.0
     general_goal_checker:
       stateful: True
@@ -288,7 +288,7 @@ behavior_server:
     assisted_teleop:
       plugin: "nav2_behaviors/AssistedTeleop"
     global_frame: odom
-    robot_base_frame: velodyne
+    robot_base_frame: base_link
     transform_tolerance: 0.1
     use_sim_time: true
     simulate_ahead_time: 2.0

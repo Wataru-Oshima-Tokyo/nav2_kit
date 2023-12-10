@@ -1,5 +1,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
+#include "nav_msgs/msg/odometry.hpp" // Include odometry message
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
@@ -22,9 +23,15 @@ public:
         subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
             target_topic, 
             rclcpp::QoS(10).best_effort(),  // Set history depth and QoS to Best Effort
-            std::bind(&FakeScan::callback, this, std::placeholders::_1));
+            std::bind(&FakeScan::scan_callback, this, std::placeholders::_1));
+        // Subscribe to /dlio/odom_node/odom to catch the pitch
+        odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+            "/dlio/odom_node/odom", 
+            rclcpp::QoS(10).best_effort(),  // Set history depth and QoS to Best Effort
+            std::bind(&FakeScan::odom_callback, this, std::placeholders::_1));
+        std::string service_name = "/toggle_scanning/" + target_topic;
         start_scanning_service_ = this->create_service<std_srvs::srv::SetBool>(
-            "toggle_scanning",
+            service_name,
             std::bind(&FakeScan::handle_scan_toggle, this, std::placeholders::_1, std::placeholders::_2));
         fake_frame_id_ = "fake_laser";
         broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
@@ -33,7 +40,7 @@ public:
     }
 
 private:
-    void callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
+    void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
     {
         // RCLCPP_WARN(this->get_logger(), "Received scan topic");
         if (start_scanning)
@@ -44,7 +51,15 @@ private:
         }
 
     }
-        // Service callback to toggle collision detection
+    // scan_callback to handle odometry data
+    void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+    {
+        // Extract the pitch from the odometry message
+        double pitch = msg->pose.pose.orientation.x;
+        // Log the pitch for debugging
+        RCLCPP_INFO(this->get_logger(), "Received pitch: %f", pitch);
+    }
+        // Service scan_callback to toggle collision detection
     void handle_scan_toggle(const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
                                            std::shared_ptr<std_srvs::srv::SetBool::Response> response)
     {
@@ -55,6 +70,7 @@ private:
     }
 
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr subscription_;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_; // Odometry subscription
     rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr publisher_;
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_scanning_service_;
     std::string fake_frame_id_;

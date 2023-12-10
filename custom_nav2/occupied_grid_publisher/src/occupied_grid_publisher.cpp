@@ -14,7 +14,9 @@ public:
     // Subscriber for the occupancy grid topic.
     occupancy_grid_subscriber_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
       "global_costmap/costmap", 10, std::bind(&OccupiedGridPublisher::occupancyGridCallback, this, std::placeholders::_1));
-    client_ = this->create_client<std_srvs::srv::SetBool>("toggle_scanning");
+
+    scan_for_move_client_ = this->create_client<std_srvs::srv::SetBool>("/toggle_scanning/scan_for_move");
+    scan_client_ = this->create_client<std_srvs::srv::SetBool>("/toggle_scanning/scan");
     request_ = std::make_shared<std_srvs::srv::SetBool::Request>();
     // Publisher for the occupied cells topic.
     occupied_cells_publisher_ = this->create_publisher<techshare_ros_pkg2::msg::PointArray>("occupied_cells", 10);
@@ -91,17 +93,23 @@ private:
   
   void send_request(bool enable) {
     request_->data = enable;
-    while (!client_->wait_for_service(std::chrono::seconds(1))) {
-      if (!rclcpp::ok()) {
-        RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
-        return;
+    std::array<rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr, 2> services = {scan_for_move_client_, scan_client_};
+    for (const auto& service : services){
+      while (!service->wait_for_service(std::chrono::seconds(1))) {
+        if (!rclcpp::ok()) {
+          RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
+          return;
+        }
+        RCLCPP_INFO(this->get_logger(), "Waiting for service to appear...");
       }
-      RCLCPP_INFO(this->get_logger(), "Waiting for service to appear...");
+
+      auto result = service->async_send_request(request_,
+        std::bind(&OccupiedGridPublisher::handle_response, this, std::placeholders::_1));
     }
 
-    auto result = client_->async_send_request(request_,
-      std::bind(&OccupiedGridPublisher::handle_response, this, std::placeholders::_1));
   }
+
+  
   void handle_response(rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture future) {
     auto response = future.get();
     if (response->success) {
@@ -119,7 +127,8 @@ private:
   std::unordered_set<std::string> first_costmap_points_;
   bool initial_costmap_flag = true;
   double threshold_ = 0.15;  // Define a threshold, for example 10 cm.
-  rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr client_;
+  rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr scan_for_move_client_;
+  rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr scan_client_;
   std_srvs::srv::SetBool::Request::SharedPtr request_;
 };
 
