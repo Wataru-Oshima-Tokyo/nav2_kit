@@ -41,9 +41,11 @@ class MarkerLcalization(Node):
         self.marker_position_on_map.append(None)
 
         self.timer1 = self.create_timer(1, self.lookup_transform)  # 0.01 seconds = 10ms = 100Hz
-        self.timer2 = self.create_timer(0.05, self.run)  # 0.1 seconds = 10ms = 10Hz
+        self.timer2 = self.create_timer(0.1, self.run)  # 0.1 seconds = 10ms = 10Hz
+        self.timer3 = self.create_timer(1, self.lookup_transfporm_to_wait)  # 0.01 seconds = 10ms = 100Hz
         self.transform_fetched = False
         self.initial_transform = False
+        self.dlio_wait = True
         self.now = time.time()
 
 
@@ -58,6 +60,17 @@ class MarkerLcalization(Node):
                 self.now = time.time()
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
                 self.get_logger().error('Error looking up transform: %s' % e)
+
+    def lookup_transfporm_to_wait(self):
+        if self.dlio_wait:  # Check if transform is not fetched yet
+            try:
+                # Get the transform from "map" to "marker"
+                transform = self.tf_buffer.lookup_transform('odom', 'base_link', rclpy.time.Time())
+                self.get_logger().info('Odom to base_link Transform obtained successfully!')
+                # Set the flag to True after successfully fetching the transform
+                self.dlio_wait = False
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+                self.get_logger().error('Error looking up transform: %s' % e)     
 
     def isPassedTime(self, duration):
         if (time.time() - self.now) > duration:
@@ -75,7 +88,7 @@ class MarkerLcalization(Node):
             if len(self.pose_array) < 50:
                 self.get_logger().info('The number of pose array is : %d' %len(self.pose_array) )
 
-            if self.transform_fetched and not self.initial_transform and len(self.pose_array) > 50:
+            if self.transform_fetched and not self.initial_transform and len(self.pose_array) > 50 and not self.dlio_wait:
                 # robot_position = self.compute_robot_position_on_map(transform.transform)
                 self.emcl_tf_publish_set_service.call_async(self.emcl_tf_req)
                 self.publish_transform(transform.transform)

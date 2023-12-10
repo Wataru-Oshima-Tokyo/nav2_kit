@@ -40,7 +40,8 @@ private:
             last_scan_ = *msg; // Store the incoming scan data
         else{
             RCLCPP_WARN(this->get_logger(), "not started scanning yet...");
-            std::fill(last_scan_.ranges.begin(), last_scan_.ranges.end(), std::numeric_limits<float>::infinity());
+            last_scan_ = *msg; 
+            std::fill(last_scan_.ranges.begin(), last_scan_.ranges.end(), 0);
         }
 
     }
