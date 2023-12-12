@@ -135,8 +135,8 @@ private:
         int scan_index_min = 0;
         int scan_index_max = std::round(msg->angle_max / scan_angle_increment); 
         // Reduce the range to 1/3 of the original range for more focused checking
-        double scan_angle_min_slowdown_rad =  msg->angle_min/3;  // minimum angle for slowdown in radians
-        double scan_angle_max_slowdown_rad = msg->angle_max/3;   // maximum angle for slowdown in radians
+        double scan_angle_min_slowdown_rad =  msg->angle_min/9;  // minimum angle for slowdown in radians
+        double scan_angle_max_slowdown_rad = msg->angle_max/9;   // maximum angle for slowdown in radians
         // calculate the indices in the ranges list that correspond to the reduced range
         int scan_index_min_slowdown = std::round((scan_angle_min_slowdown_rad  + msg->angle_max) / scan_angle_increment);
         int scan_index_max_slowdown = std::round((scan_angle_max_slowdown_rad + msg->angle_max) / scan_angle_increment);
