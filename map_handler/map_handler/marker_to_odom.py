@@ -47,10 +47,11 @@ class MarkerLcalization(Node):
 
         self.timer1 = self.create_timer(1, self.lookup_transform)  # 0.01 seconds = 10ms = 100Hz
         self.timer2 = self.create_timer(0.05, self.run)  # 0.1 seconds = 10ms = 10Hz
-        self.timer2 = self.create_timer(0.05, self.lookup_transform_for_map_to_odom)  # 0.1 seconds = 10ms = 10Hz
+        self.timer3 = self.create_timer(0.05, self.lookup_transform_for_map_to_odom)  # 0.1 seconds = 10ms = 10Hz
         self.transform_fetched = False
         self.initial_transform = False
         self.map_to_odom_fetched = False
+        self.dlio_wait = True
         self.now = time.time()
 
 
@@ -75,7 +76,7 @@ class MarkerLcalization(Node):
                 msg.pose.pose.orientation.w = 1.0
                 self.init_pose_publisher_.publish(msg)
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
-                self.get_logger().error('Error looking up transform: %s' % e)
+                self.get_logger().error('Error looking up transform: %s' % e)     
 
     def isPassedTime(self, duration):
         if (time.time() - self.now) > duration:
