@@ -135,7 +135,7 @@ class InitialPoseSetter(Node):
 
     def init_pose_callback(self, msg):
         self.transform = None
-        self.killNodes()
+        # self.killNodes()
         self.alpha_array = []
         self.color_print.print_in_pink(msg.pose)
         self.init_pose_check = True

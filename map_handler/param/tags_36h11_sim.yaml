@@ -16,6 +16,6 @@
 
         # optional list of tags
         tag:
-            ids: [301]            # tag ID
-            frames: ["301"]  # optional frame name
-            sizes: [0.1]
+            ids: [301, 302]            # tag ID
+            frames: ["301", "302"]  # optional frame name
+            sizes: [0.1, 0.1]
