@@ -195,7 +195,7 @@ class NodeMonitor(Node):
             # Return True only if both specific nodes are running and no others
             return rcs_client_node_running and node_monitor_running
         # Kill ROS related processes
-        cmd_ros = "ps aux | grep ros | grep -v grep | grep -v process_handler | grep -v rcs_client_node | awk '{ print $2 }'"
+        cmd_ros = "ps aux | grep ros | grep -v grep | grep -v process_handler | grep -v detect_simple_server | grep -v robot_control | grep -v rcs_client_node | awk '{ print $2 }'"
         kill_processes(cmd_ros)
 
         # Kill catmux related processes

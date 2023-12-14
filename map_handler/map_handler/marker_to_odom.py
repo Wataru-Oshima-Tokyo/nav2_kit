@@ -40,14 +40,12 @@ class MarkerLcalization(Node):
         else:
             self.get_logger().info('Do not USE SIM TIME ')
 
-        # Subscribe to the marker detection topic
-        self.marker_position_on_map = []
-        self.marker_position_on_map.append(None)
-        self.marker_position_on_map.append(None)
+
 
         self.timer1 = self.create_timer(1, self.lookup_transform)  # 0.01 seconds = 10ms = 100Hz
         self.timer2 = self.create_timer(0.05, self.run)  # 0.1 seconds = 10ms = 10Hz
-        self.timer3 = self.create_timer(0.05, self.lookup_transform_for_map_to_odom)  # 0.1 seconds = 10ms = 10Hz
+        self.timer3 = self.create_timer(0.1, self.lookup_transform_for_map_to_odom)  # 0.1 seconds = 10ms = 10Hz
+        self.timer4 = self.create_timer(0.1, self.lookup_transform_for_odom_to_base_link)  # 0.1 seconds = 10ms = 10Hz
         self.transform_fetched = False
         self.initial_transform = False
         self.map_to_odom_fetched = False
@@ -56,6 +54,8 @@ class MarkerLcalization(Node):
 
 
     def lookup_transform(self):
+        if self.dlio_wait:
+            return
         if not self.transform_fetched:  # Check if transform is not fetched yet
             try:
                 # Get the transform from "map" to "marker"
@@ -76,27 +76,43 @@ class MarkerLcalization(Node):
                 msg.pose.pose.orientation.w = 1.0
                 self.init_pose_publisher_.publish(msg)
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
-                self.get_logger().error('Error looking up transform: %s' % e)     
+                pass
+                #self.get_logger().error('Error looking up transform: %s' % e)     
+
+    def lookup_transform_for_odom_to_base_link(self):
+        if self.dlio_wait:  # Check if transform is not fetched yet
+            try:
+                # Get the transform from "map" to "marker"
+                odom_base_link_transform = self.tf_buffer.lookup_transform('odom', 'base_link', rclpy.time.Time())
+                self.get_logger().info('Odom to base_link Transform obtained successfully!')
+                # Set the flag to True after successfully fetching the transform
+                self.dlio_wait = False
+                self.now = time.time()
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+                pass
+                # self.get_logger().error('Error looking up transform: %s' % e) 
 
     def isPassedTime(self, duration):
-        if (time.time() - self.now) > duration:
-            return True
-        else:
-            return False
+            if (time.time() - self.now) > duration:
+                return True
+            else:
+                return False
 
 
 
     def run(self):
         try:
             # Get the transform from "map" to "marker"
+            if self.dlio_wait:
+                return
             transform301 = self.tf_buffer.lookup_transform('base_link', '301', rclpy.time.Time())
             # transform302 = self.tf_buffer.lookup_transform('base_link', '302', rclpy.time.Time())
             self.array_301.append(transform301)
             # self.array_302.append(transform302)
             publish_flag = True
             if len(self.array_301) < 50:
-                self.get_logger().info('The number of 301 array is : %d' %len(self.array_301) )
-                # self.get_logger().info('The number of 302 array is : %d' %len(self.array_302) )
+                print('\033[94m' + 'The number of 301 array is : %d' %len(self.array_301) + '\033[0m')
+                # print('\033[94m' + 'The number of 302 array is : %d' %len(self.array_302) + '\033[0m')
                 publish_flag = False
 
             if self.transform_fetched and not self.initial_transform and publish_flag and self.map_to_odom_fetched:
@@ -133,7 +149,8 @@ class MarkerLcalization(Node):
                 # Set the flag to True after successfully fetching the transform
                 self.map_to_odom_fetched = True
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
-                self.get_logger().error('Error looking up transform: %s' % e) 
+                pass
+                # self.get_logger().error('Error looking up transform: %s' % e) 
 
 
     def find_angle_with_cosine_law(self, a, b):
@@ -159,9 +176,6 @@ class MarkerLcalization(Node):
         # median_x_302 = (x_translations_302[24] + x_translations_302[25]) / 2
         # median_y_302 = (y_translations_302[24] + y_translations_302[25]) / 2
         # You can also fill the covariance matrix here
-
-        while not self.map_to_odom_fetched:
-            time.sleep(1)
         # # Create and set the TransformStamped message using median values
         transform = TransformStamped()
         transform.header.stamp = self.get_clock().now().to_msg()
@@ -172,7 +186,7 @@ class MarkerLcalization(Node):
         transform.transform.translation.z = self.map_to_odom_transform.transform.translation.z  # Assuming 2D movement
         transform.transform.rotation = self.map_to_odom_transform.transform.rotation  # Assuming 2D movement
         self.static_broadcaster.sendTransform(transform)
-        self.get_logger().info(f'robot is situated: ({transform.transform.translation.x}, {transform.transform.translation.y})')
+        self.get_logger().info(f'robot is located: ({transform.transform.translation.x}, {transform.transform.translation.y})')
         # self.get_logger().info(f'marker to odom Y for 301: {msg.pose.pose.position.y}')
         # # self.get_logger().info(f'marker to odom X for 301: {median_x_302}')
         # # self.get_logger().info(f'marker to odom Y for 301: {median_y_302}')
