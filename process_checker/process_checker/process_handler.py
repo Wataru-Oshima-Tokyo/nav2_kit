@@ -221,42 +221,6 @@ class NodeMonitor(Node):
             self.rcs_send_msg_service.call_async(req)
             self.started = False
             self.initial_success = False
-    # def killAll(self):
-    #     req = SendMsg.Request()
-    #     req.message = "Trying to kill all the processes"
-    #     req.error = True
-    #     self.rcs_send_msg_service.call_async(req)
-    #     try:
-    #         # Kill ROS related processes
-    #         cmd_ros = "ps aux | grep ros | grep -v grep | grep -v process_handler | grep -v rcs_client_node | awk '{ print $2 }'"
-    #         ros_pids = subprocess.check_output(cmd_ros, shell=True).decode().split()
-    #         for pid in ros_pids:
-    #             self.color_print.print_in_blue("Killing processes...")
-    #             os.kill(int(pid), signal.SIGKILL)
-
-    #         # Kill catmux related processes
-    #         cmd_catmux = "ps aux | grep catmux | grep -v grep | grep -v process_handler | awk '{ print $2 }'"
-    #         catmux_pids = subprocess.check_output(cmd_catmux, shell=True).decode().split()
-    #         for pid in catmux_pids:
-    #             self.color_print.print_in_blue("Killing catmux...")
-    #             os.kill(int(pid), signal.SIGKILL)
-
-    #         time.sleep(2)  # Wait for processes to terminate
-
-    #         # Check if all processes are killed
-    #         if not ros_pids and not catmux_pids:
-    #             self.color_print.print_in_brown("All nodes except for 'process_handler' and 'rcs client' have been killed.")
-    #             self.started = False
-    #             req.message = "Killed all the processes"
-    #             req.error = False
-    #             self.rcs_send_msg_service.call_async(req)
-    #             self.initial_success = False
-    #         else:
-    #             self.color_print.print_in_yellow("Some processes might still be running.")
-            
-    #     except subprocess.CalledProcessError:
-    #         self.color_print.print_in_yellow("Failed to execute the process kill command")
-
             
 
     def handle_killall(self, request, response):
