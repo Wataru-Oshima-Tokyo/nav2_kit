@@ -14,6 +14,7 @@ setup(
          ('share/' + package_name + '/launch', glob.glob('launch/*.py')),
          ('share/' + package_name + '/param', glob.glob('param/*')),
          ('share/' + package_name + '/maps', [f for f in glob.glob('maps/**/*', recursive=True) if not isdir(f)]),
+         ('share/' + package_name + '/pcd', glob.glob('pcd/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

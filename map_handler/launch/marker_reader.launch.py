@@ -19,7 +19,7 @@ def launch_setup(context, *args, **kwargs):
     camera_topic = "/" + camera_name +"/image_raw"
     camera_info = "/" + camera_name + "/camera_info"
     marker_name = map_name + "_marker.yaml"
-    emcl_param_name = "liosam_emcl.yaml"
+    emcl_param_name = "lio_emcl.yaml"
 
 
     share_dir = get_package_share_directory('map_handler')

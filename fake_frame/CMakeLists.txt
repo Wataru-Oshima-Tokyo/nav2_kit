@@ -14,6 +14,8 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
+find_package(nav_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -30,7 +32,7 @@ add_executable(fake_imu src/fake_imu.cpp)
 ament_target_dependencies(fake_imu rclcpp sensor_msgs)
 
 add_executable(fake_scan src/fake_scan.cpp)
-ament_target_dependencies(fake_scan rclcpp sensor_msgs tf2_ros geometry_msgs)
+ament_target_dependencies(fake_scan rclcpp sensor_msgs tf2_ros geometry_msgs std_srvs nav_msgs)
 
 
 if(BUILD_TESTING)

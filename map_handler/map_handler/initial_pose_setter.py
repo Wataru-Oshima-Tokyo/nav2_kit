@@ -57,11 +57,7 @@ class InitialPoseSetter(Node):
                 # Get the transform from "map" to "marker"
                 self.transform = self.tf_buffer.lookup_transform('map', 'emcl_odom', rclpy.time.Time(), timeout=rclpy.duration.Duration(seconds=1.0))
                 self.get_logger().info('Map to marker Transform obtained successfully!')
-                # Set the flag to True after successfully fetching the transform
-                # self.transform_fetched = True
-                # self.now = time.time()
-                # Use the transform as required
-                # ... [your code here] ...
+
                 return True
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
                 self.get_logger().error('Error looking up transform: %s' % e)
@@ -139,7 +135,7 @@ class InitialPoseSetter(Node):
 
     def init_pose_callback(self, msg):
         self.transform = None
-        self.killNodes()
+        # self.killNodes()
         self.alpha_array = []
         self.color_print.print_in_pink(msg.pose)
         self.init_pose_check = True
