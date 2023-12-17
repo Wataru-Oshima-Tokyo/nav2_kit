@@ -12,21 +12,44 @@ find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(techshare_ros_pkg2 REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(nav2_costmap_2d REQUIRED)
+find_package(nav2_msgs REQUIRED)
+
+
+
 add_executable(occupied_grid_publisher src/occupied_grid_publisher.cpp)
+add_executable(safety_costmap src/safety_costmap.cpp)
 
 # It's important to place this after the custom message generation
-ament_target_dependencies(occupied_grid_publisher
+
+set(dependencies
   rclcpp
   nav_msgs
   geometry_msgs
   techshare_ros_pkg2
   std_srvs
+  nav_msgs
+  sensor_msgs
+  tf2_ros
+  tf2_geometry_msgs
+  tf2
+  nav2_costmap_2d
+  nav2_msgs
 )
+
+ament_target_dependencies(occupied_grid_publisher ${dependencies})
+ament_target_dependencies(safety_costmap ${dependencies})
 
 # You should depend on the message generation before building the executable
 
 install(TARGETS
   occupied_grid_publisher
+  safety_costmap
   DESTINATION lib/${PROJECT_NAME}
 )
 

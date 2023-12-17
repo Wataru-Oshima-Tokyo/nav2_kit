@@ -6,23 +6,34 @@
 #include <sstream>
 #include <cmath>
 #include "std_srvs/srv/set_bool.hpp"
+#include "map_msgs/msg/occupancy_grid_update.hpp"
+#include "nav2_msgs/msg/costmap.hpp"
+#include "nav2_msgs/srv/get_costmap.hpp"
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 class OccupiedGridPublisher : public rclcpp::Node {
 public:
   OccupiedGridPublisher()
-  : Node("occupied_grid_publisher") {
-    // Subscriber for the occupancy grid topic.
-    occupancy_grid_subscriber_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
-      "global_costmap/costmap", 10, std::bind(&OccupiedGridPublisher::occupancyGridCallback, this, std::placeholders::_1));
-
+  : Node("occupied_grid_publisher"), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_) {
+      this->get_parameter("use_sim_time", use_sim_time_);
+      if (use_sim_time_)
+      {
+          this->set_parameter(rclcpp::Parameter("use_sim_time", true));
+      }
+    occupancy_grid_update_subscriber_ = this->create_subscription<map_msgs::msg::OccupancyGridUpdate>(
+      "global_costmap/costmap_updates", 10, std::bind(&OccupiedGridPublisher::occupancyGridUpdateCallback, this, std::placeholders::_1));
     scan_for_move_client_ = this->create_client<std_srvs::srv::SetBool>("/toggle_scanning/scan_for_move");
     scan_client_ = this->create_client<std_srvs::srv::SetBool>("/toggle_scanning/scan");
+    costmap_client_ = this->create_client<nav2_msgs::srv::GetCostmap>("/global_costmap/get_costmap");
     request_ = std::make_shared<std_srvs::srv::SetBool::Request>();
     // Publisher for the occupied cells topic.
     occupied_cells_publisher_ = this->create_publisher<techshare_ros_pkg2::msg::PointArray>("occupied_cells", 10);
+    prepareCostmap();
     // Timer for resetting the hash map.
-    reset_timer_ = this->create_wall_timer(
-      std::chrono::seconds(5), std::bind(&OccupiedGridPublisher::resetHashMap, this));
+    // reset_timer_ = this->create_wall_timer(
+    //   std::chrono::seconds(5), std::bind(&OccupiedGridPublisher::resetHashMap, this));
 
 
     
@@ -31,65 +42,70 @@ public:
 private:
 
 
-  std::string createKey(double x, double y) {
-    int x_key = std::floor(x / threshold_);
-    int y_key = std::floor(y / threshold_);
-    std::stringstream ss;
-    ss << x_key << "," << y_key;
-    return ss.str();
-  }
+    void prepareCostmap()
+    {
+        auto request = std::make_shared<nav2_msgs::srv::GetCostmap::Request>();
+        // Set any necessary fields in the request
 
-  void resetHashMap() {
-    occupied_cells_publisher_->publish(point_array_msg);
-    // Reset the hash map but retain the keys from the first costmap.
-    std::unordered_set<std::string> temp = first_costmap_points_;
-    published_points_.swap(temp);
-    RCLCPP_INFO(this->get_logger(), "Hash map reset, retaining first costmap points.");
-  }
+        while (!costmap_client_->wait_for_service(std::chrono::seconds(1))) {
+            // if (!rclcpp::ok()) {
+            //     RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
+            //     return;
+            // }
+            RCLCPP_INFO(this->get_logger(), "Waiting for service to appear...");
+        }
+
+        auto result_future = costmap_client_->async_send_request(request);
+
+        if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), result_future) !=
+            rclcpp::FutureReturnCode::SUCCESS)
+        {
+            RCLCPP_ERROR(this->get_logger(), "Service call failed.");
+            return;
+        }
+        auto response = result_future.get();
+        RCLCPP_INFO(this->get_logger(), "\033[1;31m---->Received a costmap\033[0m");
+        costmap_.metadata.resolution = response->map.metadata.resolution;
+        costmap_.metadata.size_x = response->map.metadata.size_x;
+        costmap_.metadata.size_y = response->map.metadata.size_y;
+        costmap_.metadata.origin.position.x = response->map.metadata.origin.position.x; 
+        costmap_.metadata.origin.position.y = response->map.metadata.origin.position.y; 
+        send_request(true);
+        initial_costmap_flag = false;
+    }
 
 
-  void occupancyGridCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
-    // Iterate through the occupancy grid and check for occupied cells.
-    size_t initial_size = published_points_.size();
-    
+
+
+
+  void occupancyGridUpdateCallback(const map_msgs::msg::OccupancyGridUpdate::SharedPtr msg) {
+    if (initial_costmap_flag) return;
+    // std::vector<geometry_msgs::msg::PointStamped> points_to_publish;
     std::vector<geometry_msgs::msg::Point> points_to_publish;
     for (unsigned int i = 0; i < msg->data.size(); ++i) {
-      
       if (msg->data[i] == 100) {  // Occupied cell
-        // Convert the index to 2D grid coordinates.
-        unsigned int mx = i % msg->info.width;
-        unsigned int my = i / msg->info.width;
+        // Convert index to 2D grid coordinates.
+        unsigned int mx = (i % msg->width) + msg->x;
+        unsigned int my = (i / msg->width) + msg->y;
 
         // Convert grid coordinates to world coordinates.
-        double wx = msg->info.origin.position.x + (mx + 0.5) * msg->info.resolution;
-        double wy = msg->info.origin.position.y + (my + 0.5) * msg->info.resolution;
+        double wx = costmap_.metadata.origin.position.x + (mx + 0.5) * costmap_.metadata.resolution;
+        double wy = costmap_.metadata.origin.position.y + (my + 0.5) * costmap_.metadata.resolution;
 
-        std::string key = createKey(wx, wy);
-        
-        if (first_costmap_points_.find(key) == first_costmap_points_.end()) {
-          // Publish the occupied cell point.
-          published_points_.insert(key);
-          geometry_msgs::msg::Point occupied_cell;
-          occupied_cell.x = wx;
-          occupied_cell.y = wy;
-          occupied_cell.z = 0.0;  // Assuming 2D, the z-coordinate is set to zero.
-          points_to_publish.push_back(occupied_cell);
-        }
+        geometry_msgs::msg::Point occupied_cell;
+        occupied_cell.x = wx;
+        occupied_cell.y = wy;
+        points_to_publish.push_back(occupied_cell);
       }
     }
-    point_array_msg.points = points_to_publish;
-    if (initial_costmap_flag){
-      first_costmap_points_ = published_points_;
-      send_request(true);
-      initial_costmap_flag = false;
-    }
-    size_t new_points = published_points_.size() - initial_size;
-    if(new_points > 0) {
-      RCLCPP_INFO(this->get_logger(), "\033[1;32m---->New unique points published: %ld\033[0m", new_points);
-    }else{
-      RCLCPP_INFO(this->get_logger(), "\033[1;31m No new points\033[0m");
+    if (!points_to_publish.empty()) {
+      point_array_msg.points = points_to_publish;
+      occupied_cells_publisher_->publish(point_array_msg);
+      RCLCPP_INFO(this->get_logger(), "Published %zu occupied points", point_array_msg.points.size());
     }
   }
+
+
   
   void send_request(bool enable) {
     request_->data = enable;
@@ -120,16 +136,19 @@ private:
   }
 
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr occupancy_grid_subscriber_;
+  rclcpp::Subscription<map_msgs::msg::OccupancyGridUpdate>::SharedPtr occupancy_grid_update_subscriber_;
   rclcpp::Publisher<techshare_ros_pkg2::msg::PointArray>::SharedPtr occupied_cells_publisher_;
+  rclcpp::Client<nav2_msgs::srv::GetCostmap>::SharedPtr costmap_client_;
+  tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
   techshare_ros_pkg2::msg::PointArray point_array_msg;
-  rclcpp::TimerBase::SharedPtr reset_timer_;
-  std::unordered_set<std::string> published_points_;
-  std::unordered_set<std::string> first_costmap_points_;
   bool initial_costmap_flag = true;
-  double threshold_ = 0.15;  // Define a threshold, for example 10 cm.
+  bool use_sim_time_;
+  // double threshold_ = 0.15;  // Define a threshold, for example 10 cm.
   rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr scan_for_move_client_;
   rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr scan_client_;
   std_srvs::srv::SetBool::Request::SharedPtr request_;
+  nav2_msgs::msg::Costmap costmap_;
 };
 
 int main(int argc, char **argv) {
