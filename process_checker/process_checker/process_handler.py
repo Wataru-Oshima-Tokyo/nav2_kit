@@ -187,6 +187,12 @@ class NodeMonitor(Node):
                     rcs_client_node_running = True
                 elif 'node_monitor' in node_name:
                     node_monitor_running = True
+                elif 'detect_simple_server' in node_name:
+                    continue
+                elif 'robot_control' in node_name:
+                    continue
+                elif 'daemon' in node_name:
+                    continue
                 else:
                     # If any other node is found, return False
                     self.color_print.print_in_yellow(nodes)
