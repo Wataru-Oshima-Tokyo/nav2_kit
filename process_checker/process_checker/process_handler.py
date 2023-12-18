@@ -168,14 +168,21 @@ class NodeMonitor(Node):
         self.rcs_send_msg_service.call_async(req)
 
         # Function to kill processes based on a command
-        def kill_processes(cmd):
+        def sigint_processes(cmd):
             pids = subprocess.check_output(cmd, shell=True).decode().split()
             for pid in pids:
                 try:
                     os.kill(int(pid), signal.SIGINT)
                 except OSError as e:
                     self.color_print.print_in_yellow(f"Failed to kill process {pid}: {e}")
-        
+        # Function to kill processes based on a command
+        def kill_processes(cmd):
+            pids = subprocess.check_output(cmd, shell=True).decode().split()
+            for pid in pids:
+                try:
+                    os.kill(int(pid), signal.SIGKILL)
+                except OSError as e:
+                    self.color_print.print_in_yellow(f"Failed to kill process {pid}: {e}")
         def check_nodes(nodes):
             # Flags to check if specific nodes are running
             rcs_client_node_running = False
@@ -208,9 +215,11 @@ class NodeMonitor(Node):
 
         # Kill ROS related processes
         cmd_ros = "ps aux | grep ros | grep -v grep | grep -v process_handler | grep -v detect_simple_server | grep -v robot_control | grep -v rcs_client_node | awk '{ print $2 }'"
-        kill_processes(cmd_ros)
+        sigint_processes(cmd_ros)
+        
+    
         # Polling to check if the nodes are still running
-        max_attempts = 120
+        max_attempts = 60
         attempt = 0
         while attempt < max_attempts:
             running_nodes = check_nodes(self.get_node_names_and_namespaces())
@@ -218,9 +227,12 @@ class NodeMonitor(Node):
                 break
             time.sleep(1)  # Wait for 1 second before checking again
             attempt += 1
+        cmd_ros = "ps aux | grep ros | grep -v grep | grep -v process_handler | grep -v detect_simple_server | grep -v robot_control | grep -v rcs_client_node | awk '{ print $2 }'"
+        kill_processes(cmd_ros)
+        time.sleep(3) 
         # Kill catmux related processes
         cmd_catmux = "ps aux | grep catmux | grep -v grep | grep -v process_handler | awk '{ print $2 }'"
-        kill_processes(cmd_catmux)
+        sigint_processes(cmd_catmux)
         # kill_processes(cmd_catmux)
         if attempt == max_attempts:
             self.color_print.print_in_yellow("Some nodes might still be running after multiple attempts.")
