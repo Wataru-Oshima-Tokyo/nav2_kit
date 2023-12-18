@@ -172,7 +172,7 @@ class NodeMonitor(Node):
             pids = subprocess.check_output(cmd, shell=True).decode().split()
             for pid in pids:
                 try:
-                    os.kill(int(pid), signal.SIGKILL)
+                    os.kill(int(pid), signal.SIGINT)
                 except OSError as e:
                     self.color_print.print_in_yellow(f"Failed to kill process {pid}: {e}")
         
@@ -194,14 +194,15 @@ class NodeMonitor(Node):
 
             # Return True only if both specific nodes are running and no others
             return rcs_client_node_running and node_monitor_running
+        
+
+        #shutdown all the lifecycle nodes
+        # self.shutdonw_lifecycle_nodes()
+
+
         # Kill ROS related processes
         cmd_ros = "ps aux | grep ros | grep -v grep | grep -v process_handler | grep -v detect_simple_server | grep -v robot_control | grep -v rcs_client_node | awk '{ print $2 }'"
         kill_processes(cmd_ros)
-
-        # Kill catmux related processes
-        cmd_catmux = "ps aux | grep catmux | grep -v grep | grep -v process_handler | awk '{ print $2 }'"
-        kill_processes(cmd_catmux)
-
         # Polling to check if the nodes are still running
         max_attempts = 120
         attempt = 0
@@ -211,7 +212,10 @@ class NodeMonitor(Node):
                 break
             time.sleep(1)  # Wait for 1 second before checking again
             attempt += 1
-
+        # Kill catmux related processes
+        cmd_catmux = "ps aux | grep catmux | grep -v grep | grep -v process_handler | awk '{ print $2 }'"
+        kill_processes(cmd_catmux)
+        # kill_processes(cmd_catmux)
         if attempt == max_attempts:
             self.color_print.print_in_yellow("Some nodes might still be running after multiple attempts.")
         else:
@@ -222,6 +226,55 @@ class NodeMonitor(Node):
             self.started = False
             self.initial_success = False
             
+    def shutdonw_lifecycle_nodes(self):
+        def get_lifecycle_nodes():
+            """Get a list of lifecycle nodes."""
+            try:
+                result = subprocess.run(['ros2', 'lifecycle', 'nodes'], capture_output=True, text=True)
+                return result.stdout.strip().split('\n')
+            except Exception as e:
+                print(f"Failed to get lifecycle nodes: {e}")
+                return []
+
+        def shutdown_lifecycle_node(node_name):
+            """Shutdown a lifecycle node and verify its state."""
+            try:
+                subprocess.run(['ros2', 'lifecycle', 'set', node_name, 'shutdown'], check=True)
+                # Verify the node is shutdown
+                if is_node_shutdown(node_name):
+                    print(f"Successfully shutdown lifecycle node {node_name}")
+                else:
+                    print(f"Node {node_name} is not in the finalized state.")
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to shutdown lifecycle node {node_name}: {e}")
+
+        def is_node_shutdown(node_name):
+            """Check if the lifecycle node is in the 'finalized' state."""
+            try:
+                result = subprocess.run(['ros2', 'lifecycle', 'get', node_name], capture_output=True, text=True)
+                return 'finalized [4]' in result.stdout
+            except Exception as e:
+                print(f"Failed to get state of node {node_name}: {e}")
+                return False
+
+        lifecycle_nodes = get_lifecycle_nodes()
+        rest_of_lifecyle_node = []
+        while True:    
+            all_shutdown = True
+            for node in lifecycle_nodes:
+                shutdown_lifecycle_node(node)
+                if not is_node_shutdown(node):
+                    rest_of_lifecyle_node.append(node)
+            lifecycle_nodes = rest_of_lifecyle_node
+            rest_of_lifecyle_node = []
+            if len(lifecycle_nodes) == 0:
+                print("All lifecycle nodes have been successfully shutdown.")
+                # Proceed to the next function
+                break
+            else:
+                print("Some lifecycle nodes may not have been properly shutdown.")
+
+
 
     def handle_killall(self, request, response):
         if self.killAll():
