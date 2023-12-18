@@ -163,7 +163,7 @@ class NodeMonitor(Node):
     
     def killAll(self):
         req = SendMsg.Request()
-        req.message = "Trying to kill all processes"
+        req.message = "Trying to kill all processes... Please wait"
         req.error = True
         self.rcs_send_msg_service.call_async(req)
 
