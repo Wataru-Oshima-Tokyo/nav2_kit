@@ -172,7 +172,7 @@ local_costmap:
       # static_layer:
       #   plugin: "nav2_costmap_2d::StaticLayer"
       #   map_subscribe_transient_local: True
-      always_send_full_costmap: false
+      always_send_full_costmap: False
 
 global_costmap:
   global_costmap:
@@ -190,20 +190,9 @@ global_costmap:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
         observation_sources: fake_scan_for_move #scan_for_move
-        scan_for_move:
-          topic: /scan_for_move
-          max_obstacle_height: 1000.0
-          # min_obstacle_height: 0.5
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-          raytrace_max_range: 2.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 1.5
-          obstacle_min_range: 0.0
         fake_scan_for_move:
           topic: /fake/scan_for_move
-          # max_obstacle_height: 3.0
+          max_obstacle_height: 1000.0
           clearing: True
           marking: True
           data_type: "LaserScan"
