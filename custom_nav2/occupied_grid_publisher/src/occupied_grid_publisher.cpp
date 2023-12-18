@@ -24,12 +24,16 @@ public:
       }
     occupancy_grid_update_subscriber_ = this->create_subscription<map_msgs::msg::OccupancyGridUpdate>(
       "global_costmap/costmap_updates", 10, std::bind(&OccupiedGridPublisher::occupancyGridUpdateCallback, this, std::placeholders::_1));
+    occupancy_grid_subscriber_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
+      "global_costmap/costmap", 10, std::bind(&OccupiedGridPublisher::occupancyGridCallback, this, std::placeholders::_1));
     scan_for_move_client_ = this->create_client<std_srvs::srv::SetBool>("/toggle_scanning/scan_for_move");
     scan_client_ = this->create_client<std_srvs::srv::SetBool>("/toggle_scanning/scan");
     costmap_client_ = this->create_client<nav2_msgs::srv::GetCostmap>("/global_costmap/get_costmap");
     request_ = std::make_shared<std_srvs::srv::SetBool::Request>();
     // Publisher for the occupied cells topic.
     occupied_cells_publisher_ = this->create_publisher<techshare_ros_pkg2::msg::PointArray>("occupied_cells", 10);
+    
+    send_request(true);
     prepareCostmap();
     // Timer for resetting the hash map.
     // reset_timer_ = this->create_wall_timer(
@@ -41,18 +45,22 @@ public:
 
 private:
 
+    void occupancyGridCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
+      //do nothing but subscribe it
+    }
+
 
     void prepareCostmap()
     {
         auto request = std::make_shared<nav2_msgs::srv::GetCostmap::Request>();
         // Set any necessary fields in the request
 
-        while (!costmap_client_->wait_for_service(std::chrono::seconds(1))) {
+        while (!costmap_client_->wait_for_service(std::chrono::seconds(1)) || !get_pose()) {
             // if (!rclcpp::ok()) {
             //     RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
             //     return;
             // }
-            RCLCPP_INFO(this->get_logger(), "Waiting for service to appear...");
+            RCLCPP_INFO(this->get_logger(), "Waiting for service to appear... and tf tree from map to base_link");
         }
 
         auto result_future = costmap_client_->async_send_request(request);
@@ -70,7 +78,7 @@ private:
         costmap_.metadata.size_y = response->map.metadata.size_y;
         costmap_.metadata.origin.position.x = response->map.metadata.origin.position.x; 
         costmap_.metadata.origin.position.y = response->map.metadata.origin.position.y; 
-        send_request(true);
+        
         initial_costmap_flag = false;
     }
 
@@ -134,11 +142,30 @@ private:
       RCLCPP_ERROR(this->get_logger(), "Failed to toggle collision detection");
     }
   }
+  bool get_pose() {
+      try {
+          // Replace 'now' with 'tf2::TimePointZero' if you want to get the latest available transform
+          geometry_msgs::msg::TransformStamped transformStamped = tf_buffer_.lookupTransform("map", "base_link", this->get_clock()->now(), rclcpp::Duration::from_seconds(1.0)); 
+          current_pose.header.stamp = transformStamped.header.stamp;
+          current_pose.header.frame_id = "map";
+          current_pose.pose.position.x = transformStamped.transform.translation.x;
+          current_pose.pose.position.y = transformStamped.transform.translation.y;
+          current_pose.pose.position.z = transformStamped.transform.translation.z;
+          current_pose.pose.orientation = transformStamped.transform.rotation;
 
+          // Handle the pose as needed
+          RCLCPP_INFO(this->get_logger(), "Pose: [%f, %f, %f]", current_pose.pose.position.x, current_pose.pose.position.y, current_pose.pose.position.z);
+          return true;
+      } catch (tf2::TransformException &ex) {
+          RCLCPP_WARN(this->get_logger(), "Could not transform 'base_link' to 'map': %s", ex.what());
+          return false;
+      }
+  }
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr occupancy_grid_subscriber_;
   rclcpp::Subscription<map_msgs::msg::OccupancyGridUpdate>::SharedPtr occupancy_grid_update_subscriber_;
   rclcpp::Publisher<techshare_ros_pkg2::msg::PointArray>::SharedPtr occupied_cells_publisher_;
   rclcpp::Client<nav2_msgs::srv::GetCostmap>::SharedPtr costmap_client_;
+  geometry_msgs::msg::PoseStamped current_pose;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
   techshare_ros_pkg2::msg::PointArray point_array_msg;
