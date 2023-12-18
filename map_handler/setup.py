@@ -13,6 +13,8 @@ setup(
         ('share/' + package_name, ['package.xml']),
          ('share/' + package_name + '/launch', glob.glob('launch/*.py')),
          ('share/' + package_name + '/param', glob.glob('param/*')),
+         ('share/' + package_name + '/config', glob.glob('config/*')),
+         ('share/' + package_name + '/rviz', glob.glob('rviz/*')),
          ('share/' + package_name + '/maps', [f for f in glob.glob('maps/**/*', recursive=True) if not isdir(f)]),
          ('share/' + package_name + '/pcd', glob.glob('pcd/*')),
     ],
@@ -28,6 +30,7 @@ setup(
              'map_position_change_node = map_handler.load_map:main',
              'marker_localization = map_handler.marker_to_odom:main',
              'init_pose_setter = map_handler.initial_pose_setter:main',
+             'scan_to_costmap = map_handler.scan_to_costmap:main',
         ],
     },
 )

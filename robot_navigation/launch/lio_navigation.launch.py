@@ -57,7 +57,7 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
-    map_name_arg = DeclareLaunchArgument('map_name', default_value='aksk.yaml', description='Name of the map')
+    map_name_arg = DeclareLaunchArgument('map_name', default_value='aksk', description='Name of the map')
     sim_declare =  DeclareLaunchArgument(
             name='sim', 
             default_value='false',
