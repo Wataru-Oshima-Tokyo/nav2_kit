@@ -1,77 +1,59 @@
 import os
 
 from ament_index_python.packages import get_package_share_directory
+
 from launch import LaunchDescription
-from launch_ros.actions import Node
-from launch.actions import IncludeLaunchDescription, ExecuteProcess,RegisterEventHandler
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch_ros.substitutions import FindPackageShare
-from launch.event_handlers import OnProcessExit
-from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, OpaqueFunction
+from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
-
-def launch_setup(context, *args, **kwargs):
-    map_name = LaunchConfiguration('map_name').perform(context)
-    map_name = map_name + ".yaml"
-    map_file_path = os.path.join(get_package_share_directory('map_handler'),
-        'maps',
-         map_name)      
-
-    use_sim_time = LaunchConfiguration('use_sim_time')
-
-
-
-
-    map_config = os.path.join(get_package_share_directory(
-        'robot_navigation'), 'param', 'map_config.yaml')
-    
-    map_handler =  Node(
-            package='map_handler',
-            executable='map_position_change_node',
-            name='map_position_change_node',
-            respawn=True,
-            output='screen',
-            parameters=[{"map_file_path": map_file_path}]
-        )
-
-    map_server_node = Node(
-            package='nav2_map_server',
-            executable='map_server',
-            name='map_server',
-            respawn=True,
-            output='screen',
-            parameters=[map_config,
-                        {'topic_name': "map"},
-                        {'frame_id': "map"},
-                        {'yaml_filename': map_file_path}]
-        )
-
-    map_life_cycle_node =     Node(
-            package='nav2_lifecycle_manager',
-            executable='lifecycle_manager',
-            name='lifecycle_manager_map_server',
-            output='screen',
-            parameters=[{'use_sim_time': use_sim_time},
-                        {'autostart': True},
-                        {'bond_timeout': 0.0},
-                        {'node_names': ['map_server']}]
-        )
-
-    return [
-        map_handler,
-        map_server_node,
-        map_life_cycle_node
-    ]
+from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    map_name_arg = DeclareLaunchArgument('map_name', default_value='aksk.yaml', description='Name of the map')
-    use_sim_time_arg = DeclareLaunchArgument(
-        'use_sim_time',
-        default_value='true',
-        description='use sim time or not')
-    return LaunchDescription([
-        map_name_arg,
-        use_sim_time_arg,
-        OpaqueFunction(function=launch_setup)
-    ])
+    # Find the grid_map_demos package share directory
+    share_dir = get_package_share_directory('map_handler')
+
+    # Declare launch configuration variables that can access the launch arguments values
+    visualization_config_file = LaunchConfiguration('visualization_config')
+    rviz_config_file = LaunchConfiguration('rviz_config')
+
+    # Declare launch arguments
+    declare_visualization_config_file_cmd = DeclareLaunchArgument(
+        'visualization_config',
+        default_value=os.path.join(
+            share_dir, 'config', 'visualization.yaml'),
+        description='Full path to the Gridmap visualization config file to use')
+
+    declare_rviz_config_file_cmd = DeclareLaunchArgument(
+        'rviz_config',
+        default_value=os.path.join(
+            share_dir, 'rviz', 'grid_map_demo.rviz'),
+        description='Full path to the RVIZ config file to use')
+
+
+    grid_map_visualization_node = Node(
+        package='grid_map_visualization',
+        executable='grid_map_visualization',
+        name='grid_map_visualization',
+        output='screen',
+        parameters=[visualization_config_file]
+    )
+
+    rviz2_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        output='screen',
+        arguments=['-d', rviz_config_file]
+    )
+
+    # Create the launch description and populate
+    ld = LaunchDescription()
+
+    # Add launch arguments to the launch description
+    ld.add_action(declare_visualization_config_file_cmd)
+    ld.add_action(declare_rviz_config_file_cmd)
+
+    ld.add_action(grid_map_visualization_node)
+    ld.add_action(rviz2_node)
+
+    return ld

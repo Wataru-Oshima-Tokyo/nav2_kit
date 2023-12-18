@@ -20,7 +20,7 @@ def generate_launch_description():
         {'pcd_filename': 'dlio_map.pcd'},
         {'map_rosbag_topic': 'grid_map'},
         {'output_grid_map': 'elevation_map.bag'},
-        {'map_frame': 'map2'},
+        {'map_frame': 'map'},
         {'map_layer_name': 'elevation'},
         {'prefix': ''},
         {'set_verbosity_to_debug': False}

@@ -13,6 +13,8 @@ setup(
         ('share/' + package_name, ['package.xml']),
          ('share/' + package_name + '/launch', glob.glob('launch/*.py')),
          ('share/' + package_name + '/param', glob.glob('param/*')),
+         ('share/' + package_name + '/config', glob.glob('config/*')),
+         ('share/' + package_name + '/rviz', glob.glob('rviz/*')),
          ('share/' + package_name + '/maps', [f for f in glob.glob('maps/**/*', recursive=True) if not isdir(f)]),
          ('share/' + package_name + '/pcd', glob.glob('pcd/*')),
     ],
