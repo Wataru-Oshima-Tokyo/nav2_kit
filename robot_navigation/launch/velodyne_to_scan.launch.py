@@ -39,7 +39,8 @@ def generate_launch_description():
             package='occupied_grid_publisher',
             executable='occupied_grid_publisher',
             name='occupied_grid_publisher',
-            output="screen"
+            output="screen",
+            parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}]  
     )
 
 
@@ -133,6 +134,15 @@ def generate_launch_description():
             }],
             name='pointcloud_to_laserscan_for_move'
         ),
+        #  Node(
+        # package='occupied_grid_publisher',
+        # executable='safety_costmap',
+        # name='safety_costmap',
+        #     parameters=[{
+        #         'target_topic': "fake/scan_for_move",
+        #         'use_sim_time': LaunchConfiguration('use_sim_time'),
+        #     }]    
+        # ),   
         fake_scan_move,
         fake_scan,
         occupied_cell_node,

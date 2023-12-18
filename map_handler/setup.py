@@ -30,6 +30,7 @@ setup(
              'map_position_change_node = map_handler.load_map:main',
              'marker_localization = map_handler.marker_to_odom:main',
              'init_pose_setter = map_handler.initial_pose_setter:main',
+             'scan_to_costmap = map_handler.scan_to_costmap:main',
         ],
     },
 )

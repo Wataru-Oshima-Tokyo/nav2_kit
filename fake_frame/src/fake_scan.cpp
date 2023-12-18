@@ -71,7 +71,7 @@ private:
                 }
             } else {
                 // Reset the time when the pitch exceeded 0.2
-                RCLCPP_INFO(this->get_logger(), "Received pitch: %f", pitch);
+                // RCLCPP_INFO(this->get_logger(), "Received pitch: %f", pitch);
                 last_time_pitch_exceeded = this->get_clock()->now();
             }
         }

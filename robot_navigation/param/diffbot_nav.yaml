@@ -133,7 +133,7 @@ local_costmap:
       plugins: ["obstacle_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: True
+        enabled: False
         observation_sources: scan
         scan:
           topic: /fake/scan_for_move
@@ -223,7 +223,7 @@ global_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
         inflation_radius: 0.8
-      always_send_full_costmap: true
+      always_send_full_costmap: False
 
   global_costmap_client:
     ros__parameters:
