@@ -1,20 +1,26 @@
-sudo apt update -q && apt install -y \
-  net-tools \
-  iputils-ping \
+sudo apt update -q && sudo apt install -y \
+  iputils-ping\
   iproute2 \
   libasio-dev \
   libpcap-dev \
-  git \
-  nano \
-  vim \
   python3-rosdep \
+  snapd \
+  git \
   tmux \
-  python3-pip \
-  gazebo \
-  iproute2 \
-  libasio-dev \
-  libpcap-dev \
+  vim \
+  nano \
+  wget \
+  espeak \
+  git \
+  libusb-1.0-0-dev \
+  zsh \
   libqt5serialport5-dev \
+  software-properties-common \
+  gnome-terminal \
+  dbus-x11 \
+  libcanberra-gtk-module \
+  libcanberra-gtk3-module \
+  usbutils \
   ros-humble-joy \
   ros-humble-teleop-twist-joy \
   ros-humble-teleop-twist-keyboard \
@@ -40,6 +46,9 @@ sudo apt update -q && apt install -y \
   ros-humble-apriltag-ros \
   ros-humble-rmw-cyclonedds-cpp 
 
-# Pip installs
-python3 -m  pip install  \
-  websocket-client catmux numpy distro pyyaml
+
+python3 -m pip install --upgrade pip
+python3 -m pip install transforms3d websocket-client catmux distro numpy opencv-python depthai numpy pyttsx3 
+
+sudo add-apt-repository ppa:borglab/gtsam-release-4.1 && \
+    sudo apt install -y  libgtsam-dev libgtsam-unstable-dev
