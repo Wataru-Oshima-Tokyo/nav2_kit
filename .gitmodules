@@ -36,3 +36,6 @@
 [submodule "navigation2"]
 	path = navigation2
 	url = https://github.com/ros-planning/navigation2.git
+[submodule "ros_here"]
+	path = ros_here
+	url = https://github.com/TechShare-inc/ros_here.git
