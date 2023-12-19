@@ -59,7 +59,7 @@ class MarkerLcalization(Node):
         if not self.transform_fetched:  # Check if transform is not fetched yet
             try:
                 # Get the transform from "map" to "marker"
-                map_to_marker_transform = self.tf_buffer.lookup_transform('map', 'marker', rclpy.time.Time())
+                self.map_to_marker_transform = self.tf_buffer.lookup_transform('map', 'marker', rclpy.time.Time())
                 self.get_logger().info('Map to marker Transform obtained successfully!')
                 # Set the flag to True after successfully fetching the transform
                 self.transform_fetched = True
@@ -67,8 +67,8 @@ class MarkerLcalization(Node):
                 msg = PoseWithCovarianceStamped()
                 msg.header.stamp = self.get_clock().now().to_msg()
                 msg.header.frame_id = "map"
-                msg.pose.pose.position.x = map_to_marker_transform.transform.translation.x #- median_x_301
-                msg.pose.pose.position.y = map_to_marker_transform.transform.translation.y #- median_y_301
+                msg.pose.pose.position.x = self.map_to_marker_transform.transform.translation.x #- median_x_301
+                msg.pose.pose.position.y = self.map_to_marker_transform.transform.translation.y #- median_y_301
                 msg.pose.pose.position.z = 0.0
                 msg.pose.pose.orientation.x = 0.0
                 msg.pose.pose.orientation.y = 0.0
@@ -164,6 +164,7 @@ class MarkerLcalization(Node):
         # Extract x, y translations and z rotation (yaw) from pose_array
         x_translations_301 = sorted([pose.transform.translation.x for pose in self.array_301])
         y_translations_301 = sorted([pose.transform.translation.y for pose in self.array_301])
+        z_translations_301 = sorted([pose.transform.translation.z for pose in self.array_301])
         # x_translations_302 = sorted([pose.transform.translation.x for pose in self.array_302])
         # y_translations_302 = sorted([pose.transform.translation.y for pose in self.array_302])
 
@@ -172,6 +173,7 @@ class MarkerLcalization(Node):
         half_index = int(len(x_translations_301)/2)
         median_x_301 = (x_translations_301[half_index-1] + x_translations_301[half_index]) / 2
         median_y_301 = (y_translations_301[half_index-1] + y_translations_301[half_index]) / 2
+        median_z_301 = (z_translations_301[half_index-1] + z_translations_301[half_index]) / 2
         # Compute median values for translation
         # median_x_302 = (x_translations_302[24] + x_translations_302[25]) / 2
         # median_y_302 = (y_translations_302[24] + y_translations_302[25]) / 2
@@ -181,11 +183,12 @@ class MarkerLcalization(Node):
         transform.header.stamp = self.get_clock().now().to_msg()
         transform.header.frame_id = "map"
         transform.child_frame_id = "odom"
-        transform.transform.translation.x = self.map_to_odom_transform.transform.translation.x - median_x_301#depth
-        transform.transform.translation.y = self.map_to_odom_transform.transform.translation.y #- median_y_301 #- width
-        transform.transform.translation.z = self.map_to_odom_transform.transform.translation.z  # Assuming 2D movement
-        transform.transform.rotation = self.map_to_odom_transform.transform.rotation  # Assuming 2D movement
+        transform.transform.translation.x = self.map_to_marker_transform.transform.translation.x - median_z_301#depth
+        transform.transform.translation.y = self.map_to_marker_transform.transform.translation.y - median_y_301 #- width
+        transform.transform.translation.z = self.map_to_marker_transform.transform.translation.z  # Assuming 2D movement
+        # transform.transform.rotation = self.map_to_odom_transform.transform.rotation  # Assuming 2D movement
         self.static_broadcaster.sendTransform(transform)
+        self.get_logger().info(f'marker from robot is: ({median_x_301}, {median_y_301}, {median_z_301})')
         self.get_logger().info(f'robot is located: ({transform.transform.translation.x}, {transform.transform.translation.y})')
         # self.get_logger().info(f'marker to odom Y for 301: {msg.pose.pose.position.y}')
         # # self.get_logger().info(f'marker to odom X for 301: {median_x_302}')

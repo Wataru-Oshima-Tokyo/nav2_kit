@@ -24,6 +24,8 @@ public:
       }
     occupancy_grid_update_subscriber_ = this->create_subscription<map_msgs::msg::OccupancyGridUpdate>(
       "global_costmap/costmap_updates", 10, std::bind(&OccupiedGridPublisher::occupancyGridUpdateCallback, this, std::placeholders::_1));
+    occupancy_grid_subscriber_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
+      "global_costmap/costmap", 10, std::bind(&OccupiedGridPublisher::occupancyGridCallback, this, std::placeholders::_1));
     scan_for_move_client_ = this->create_client<std_srvs::srv::SetBool>("/toggle_scanning/scan_for_move");
     scan_client_ = this->create_client<std_srvs::srv::SetBool>("/toggle_scanning/scan");
     costmap_client_ = this->create_client<nav2_msgs::srv::GetCostmap>("/global_costmap/get_costmap");
@@ -42,6 +44,10 @@ public:
   }
 
 private:
+
+    void occupancyGridCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
+      //do nothing but subscribe it
+    }
 
 
     void prepareCostmap()

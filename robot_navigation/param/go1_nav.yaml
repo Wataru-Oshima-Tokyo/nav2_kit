@@ -86,8 +86,8 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.15 #0.25
-      yaw_goal_tolerance: 0.15 #0.25
+      xy_goal_tolerance: 0.4 #0.25
+      yaw_goal_tolerance: 0.25 #0.25
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
       desired_linear_vel: 0.6
@@ -172,7 +172,7 @@ local_costmap:
       # static_layer:
       #   plugin: "nav2_costmap_2d::StaticLayer"
       #   map_subscribe_transient_local: True
-      always_send_full_costmap: false
+      always_send_full_costmap: False
 
 global_costmap:
   global_costmap:
@@ -185,31 +185,45 @@ global_costmap:
       robot_radius: 0.22
       resolution: 0.05
       track_unknown_space: true
-      plugins: ["static_layer", "proxy_obstacle_layer", "inflation_layer"]
+      plugins: ["static_layer", "proxy_obstacle_layer", "long_obstacle_layer", "inflation_layer"]
       proxy_obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        observation_sources: scan_for_move #scan
-        scan:
-          topic: /fake/scan
-          max_obstacle_height: 3.0
-          # min_obstacle_height: 0.5
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-          raytrace_max_range: 10.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 8.5
-          obstacle_min_range: 0.0
-        scan_for_move:
+        observation_sources: fake_scan_for_move #scan_for_move
+        fake_scan_for_move:
           topic: /fake/scan_for_move
-          max_obstacle_height: 3.0
+          max_obstacle_height: 1000.0
           clearing: True
           marking: True
           data_type: "LaserScan"
           raytrace_max_range: 5.0
           raytrace_min_range: 0.0
           obstacle_max_range: 3.5
+          obstacle_min_range: 0.0
+      long_obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: fake_scan #scan
+        scan:
+          topic: /scan
+          # max_obstacle_height: 5.0
+          # min_obstacle_height: 0.5
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 5.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 3.5
+          obstacle_min_range: 0.0
+        fake_scan:
+          topic: /fake/scan
+          max_obstacle_height: 8.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 8.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 5.5
           obstacle_min_range: 0.0
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
