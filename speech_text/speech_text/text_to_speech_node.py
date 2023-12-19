@@ -9,16 +9,19 @@ class TextToSpeechNode(Node):
         self.service = self.create_service(TextToSpeech, 'speak', self.speak_callback)
         self.engine = pyttsx3.init()
         # Set up voices
-        self.japanese_voice_id = "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_JA-JP_HARUKA_11.0"  # Replace with the actual ID
-        self.english_voice_id = "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0"  # Replace with the actual ID
-
+        # self.japanese_voice_id = "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_JA-JP_HARUKA_11.0"  # Replace with the actual ID
+        self.english_voice_id = "english-us"  # Replace with the actual ID
+        self.newRate = 150  # Can be adjusted to your preference
+        self.engine.setProperty('rate', self.newRate)
+            
+        self.engine.setProperty('voice', self.english_voice_id)
     def speak_callback(self, request, response):
         self.get_logger().info('Received request: "%s"' % request.text)
         
-        if request.is_japanese:
-            self.engine.setProperty('voice', self.japanese_voice_id)
-        else:
-            self.engine.setProperty('voice', self.english_voice_id)
+        # if request.is_japanese:
+        #     self.engine.setProperty('voice', self.japanese_voice_id)
+        # else:
+        # Change speaking rate
 
         try:
             self.engine.say(request.text)
