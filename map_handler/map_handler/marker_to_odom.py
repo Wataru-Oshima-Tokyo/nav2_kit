@@ -131,11 +131,11 @@ class MarkerLcalization(Node):
                 self.req.error = True
                 self.rcs_send_msg_service.call_async(self.req)
             elif self.transform_fetched and not self.initial_transform and self.isPassedTime(7) and not self.isPassedTime(10):
-                self.req.message = "Cannot find the marker for 10 seconds... Please wait till the emcl node is ready..."
+                self.req.message = "Cannot find the marker for 10 seconds..."
                 self.req.error = True
                 self.rcs_send_msg_service.call_async(self.req)
-                self.emcl_send_msg_req.data = True
-                self.emcl_send_msg_service.call_async(self.emcl_send_msg_req)
+                # self.emcl_send_msg_req.data = True
+                # self.emcl_send_msg_service.call_async(self.emcl_send_msg_req)
                 self.destroy_node() 
                 self.initial_transform = True
                 sys.exit()
