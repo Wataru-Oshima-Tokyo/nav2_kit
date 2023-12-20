@@ -183,9 +183,14 @@ class MarkerLcalization(Node):
         transform.header.stamp = self.get_clock().now().to_msg()
         transform.header.frame_id = "map"
         transform.child_frame_id = "odom"
-        transform.transform.translation.x = self.map_to_marker_transform.transform.translation.x - median_z_301#depth
-        transform.transform.translation.y = self.map_to_marker_transform.transform.translation.y - median_y_301 #- width
-        transform.transform.translation.z = self.map_to_marker_transform.transform.translation.z  # Assuming 2D movement
+        if not use_sim_time_:
+            transform.transform.translation.x = self.map_to_marker_transform.transform.translation.x - median_z_301#depth
+            transform.transform.translation.y = self.map_to_marker_transform.transform.translation.y - median_y_301 #- width
+            transform.transform.translation.z = self.map_to_marker_transform.transform.translation.z  # Assuming 2D movement
+        else:
+            transform.transform.translation.x = self.map_to_marker_transform.transform.translation.x - median_x_301#depth
+            transform.transform.translation.y = self.map_to_marker_transform.transform.translation.y #- median_y_301 #- width
+            transform.transform.translation.z = self.map_to_marker_transform.transform.translation.z  # A
         # transform.transform.rotation = self.map_to_odom_transform.transform.rotation  # Assuming 2D movement
         self.static_broadcaster.sendTransform(transform)
         self.get_logger().info(f'marker from robot is: ({median_x_301}, {median_y_301}, {median_z_301})')

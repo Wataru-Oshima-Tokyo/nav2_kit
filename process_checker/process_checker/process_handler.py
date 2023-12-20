@@ -202,6 +202,10 @@ class NodeMonitor(Node):
                     continue
                 elif 'daemon' in node_name:
                     continue
+                elif 'foxglove_bridge_component_manager' in node_name:
+                    continue
+                elif 'foxglove_bridge' in node_name:
+                    continue
                 else:
                     # If any other node is found, return False
                     self.color_print.print_in_yellow(nodes)
@@ -216,7 +220,7 @@ class NodeMonitor(Node):
 
 
         # Kill ROS related processes
-        cmd_ros = "ps aux | grep ros | grep -v grep | grep -v process_handler | grep -v detect_simple_server | grep -v robot_control | grep -v rcs_client_node | awk '{ print $2 }'"
+        cmd_ros = "ps aux | grep ros | grep -v grep | grep -v process_handler | grep -v foxglove_bridge_component_manager | grep -v foxglove_bridge | grep -v detect_simple_server | grep -v robot_control | grep -v rcs_client_node | awk '{ print $2 }'"
         sigint_processes(cmd_ros)
         
     
@@ -230,7 +234,7 @@ class NodeMonitor(Node):
         #     time.sleep(1)  # Wait for 1 second before checking again
         #     attempt += 1
         time.sleep(1) 
-        cmd_ros = "ps aux | grep ros | grep -v grep | grep -v process_handler | grep -v detect_simple_server | grep -v robot_control | grep -v rcs_client_node | awk '{ print $2 }'"
+        cmd_ros = "ps aux | grep ros | grep -v grep  | grep -v foxglove_bridge_component_manager | grep -v foxglove_bridge  | grep -v process_handler | grep -v detect_simple_server | grep -v robot_control | grep -v rcs_client_node | awk '{ print $2 }'"
         kill_processes(cmd_ros)
         time.sleep(1) 
         # Kill catmux related processes
