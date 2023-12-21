@@ -25,8 +25,8 @@ class MarkerLcalization(Node):
         self.array_301 = []
         self.array_302 = []
         self.known_distance_for_markers = 0.2
-        use_sim_time_ = self.get_parameter("use_sim_time").get_parameter_value().bool_value 
-        self.get_logger().info(f"use_sim_time {use_sim_time_}")
+        self.use_sim_time_ = self.get_parameter("use_sim_time").get_parameter_value().bool_value 
+        self.get_logger().info(f"use_sim_time {self.use_sim_time_}")
         self.init_pose_publisher_ = self.create_publisher(PoseWithCovarianceStamped, 'init_pose_set', 10)
         self.rcs_send_msg_service = self.create_client(SendMsg, "send_msg")
         self.emcl_tf_publish_set_service = self.create_client(Empty, "emcl_node_finish_")
@@ -34,7 +34,7 @@ class MarkerLcalization(Node):
         self.emcl_tf_req = Empty.Request()
         self.emcl_send_msg_req = SetBool.Request()
         self.req = SendMsg.Request()
-        if use_sim_time_:
+        if self.use_sim_time_:
             self.get_logger().info('USE SIM TIME ')
             self.set_parameters([rclpy.parameter.Parameter("use_sim_time", rclpy.parameter.Parameter.Type.BOOL, True)])
         else:
@@ -42,7 +42,7 @@ class MarkerLcalization(Node):
 
 
 
-        self.timer1 = self.create_timer(1, self.lookup_transform)  # 0.01 seconds = 10ms = 100Hz
+        self.timer1 = self.create_timer(1, self.lookup_transform_for_map_to_marker)  # 0.01 seconds = 10ms = 100Hz
         self.timer2 = self.create_timer(0.05, self.run)  # 0.1 seconds = 10ms = 10Hz
         self.timer3 = self.create_timer(0.1, self.lookup_transform_for_map_to_odom)  # 0.1 seconds = 10ms = 10Hz
         self.timer4 = self.create_timer(0.1, self.lookup_transform_for_odom_to_base_link)  # 0.1 seconds = 10ms = 10Hz
@@ -50,10 +50,12 @@ class MarkerLcalization(Node):
         self.initial_transform = False
         self.map_to_odom_fetched = False
         self.dlio_wait = True
+        self.found_marker = False 
+        self.run = True
         self.now = time.time()
 
 
-    def lookup_transform(self):
+    def lookup_transform_for_map_to_marker(self):
         if self.dlio_wait:
             return
         if not self.transform_fetched:  # Check if transform is not fetched yet
@@ -101,62 +103,46 @@ class MarkerLcalization(Node):
 
 
     def run(self):
-        try:
-            # Get the transform from "map" to "marker"
-            if self.dlio_wait:
-                return
-            transform301 = self.tf_buffer.lookup_transform('base_link', '301', rclpy.time.Time())
-            # transform302 = self.tf_buffer.lookup_transform('base_link', '302', rclpy.time.Time())
-            self.array_301.append(transform301)
-            # self.array_302.append(transform302)
-            publish_flag = True
-            if len(self.array_301) < 50:
-                print('\033[94m' + 'The number of 301 array is : %d' %len(self.array_301) + '\033[0m')
-                # print('\033[94m' + 'The number of 302 array is : %d' %len(self.array_302) + '\033[0m')
-                publish_flag = False
-
-            if self.transform_fetched and not self.initial_transform and publish_flag and self.map_to_odom_fetched:
-                # self.emcl_tf_publish_set_service.call_async(self.emcl_tf_req)
-                self.publish_transform()
-                self.initial_transform = True
-                self.get_logger().info('Transform obtained successfully!')
-                self.req.message = "Found the marker! Now you should see the robot on the map"
-                self.req.error = False
-                self.rcs_send_msg_service.call_async(self.req)
-
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
-            self.get_logger().error('Error looking up transform: %s' % e)
-            if self.transform_fetched and not self.initial_transform and self.isPassedTime(2) and not self.isPassedTime(5):
-                self.req.message = "Still looking for the marker..."
-                self.req.error = True
-                self.rcs_send_msg_service.call_async(self.req)
-            elif self.transform_fetched and not self.initial_transform and self.isPassedTime(7) and not self.isPassedTime(10):
-                self.req.message = "Cannot find the marker for 10 seconds..."
-                self.req.error = True
-                self.rcs_send_msg_service.call_async(self.req)
-                # self.emcl_send_msg_req.data = True
-                # self.emcl_send_msg_service.call_async(self.emcl_send_msg_req)
-                self.destroy_node() 
-                self.initial_transform = True
-                sys.exit()
+        if self.run:
+            try:
+                # Get the transform from "map" to "marker"
+                if self.dlio_wait:
+                    return
+                transform301 = self.tf_buffer.lookup_transform('base_link', '301', rclpy.time.Time())
+                # transform302 = self.tf_buffer.lookup_transform('base_link', '302', rclpy.time.Time())
+                self.array_301.append(transform301)
+                # self.array_302.append(transform302)
+                if len(self.array_301) < 50:
+                    self.get_logger().info('\033[94m' + 'The number of 301 array is : %d' %len(self.array_301) + '\033[0m')
+                    self.found_marker = True
+                    return 
+                self.run = False
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+                self.get_logger().error('Error looking up transform: %s' % e)
+                if self.transform_fetched and not self.initial_transform and self.isPassedTime(2) and not self.isPassedTime(5):
+                    self.req.message = "Still looking for the marker..."
+                    self.req.error = True
+                    self.rcs_send_msg_service.call_async(self.req)
+                elif self.transform_fetched and not self.initial_transform and self.isPassedTime(7) and not self.isPassedTime(10):
+                    self.req.message = "Cannot find the marker for 10 seconds..."
+                    self.req.error = True
+                    self.rcs_send_msg_service.call_async(self.req)
+                    self.run = False
 
     def lookup_transform_for_map_to_odom(self):
         if not self.map_to_odom_fetched:  # Check if transform is not fetched yet
             try:
                 # Get the transform from "map" to "marker"
-                self.map_to_odom_transform = self.tf_buffer.lookup_transform('map', 'odom', rclpy.time.Time())
+                self.map_to_odom_transform = self.tf_buffer.lookup_transform('map', 'initial_odom', rclpy.time.Time())
                 self.get_logger().info('Map to odom Transform obtained successfully!')
                 # Set the flag to True after successfully fetching the transform
                 self.map_to_odom_fetched = True
+                self.publish_transform()
+                self.initial_transform = True
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
                 pass
                 # self.get_logger().error('Error looking up transform: %s' % e) 
 
-
-    def find_angle_with_cosine_law(self, a, b):
-        # Calculate the angle in radians
-        gamma = math.acos((a**2 + b**2 - self.known_distance_for_markers**2) / (2 * a * b))
-        return gamma
 
     def publish_transform(self):
         # Create and set the TransformStamped message
@@ -174,27 +160,33 @@ class MarkerLcalization(Node):
         median_x_301 = (x_translations_301[half_index-1] + x_translations_301[half_index]) / 2
         median_y_301 = (y_translations_301[half_index-1] + y_translations_301[half_index]) / 2
         median_z_301 = (z_translations_301[half_index-1] + z_translations_301[half_index]) / 2
-        # Compute median values for translation
-        # median_x_302 = (x_translations_302[24] + x_translations_302[25]) / 2
-        # median_y_302 = (y_translations_302[24] + y_translations_302[25]) / 2
-        # You can also fill the covariance matrix here
-        # # Create and set the TransformStamped message using median values
+
         transform = TransformStamped()
         transform.header.stamp = self.get_clock().now().to_msg()
         transform.header.frame_id = "map"
         transform.child_frame_id = "odom"
-        if not use_sim_time_:
-            transform.transform.translation.x = self.map_to_marker_transform.transform.translation.x - median_z_301#depth
-            transform.transform.translation.y = self.map_to_marker_transform.transform.translation.y - median_y_301 #- width
-            transform.transform.translation.z = self.map_to_marker_transform.transform.translation.z  # Assuming 2D movement
+        if self.found_marker:
+            if not self.use_sim_time_:
+                transform.transform.translation.x = self.map_to_marker_transform.transform.translation.x - median_z_301#depth
+                transform.transform.translation.y = self.map_to_marker_transform.transform.translation.y - median_y_301 #- width
+                transform.transform.translation.z = self.map_to_marker_transform.transform.translation.z  # Assuming 2D movement
+            else:
+                transform.transform.translation.x = self.map_to_marker_transform.transform.translation.x - median_x_301#depth
+                transform.transform.translation.y = self.map_to_marker_transform.transform.translation.y #- median_y_301 #- width
+                transform.transform.translation.z = self.map_to_marker_transform.transform.translation.z  # A
         else:
-            transform.transform.translation.x = self.map_to_marker_transform.transform.translation.x - median_x_301#depth
-            transform.transform.translation.y = self.map_to_marker_transform.transform.translation.y #- median_y_301 #- width
-            transform.transform.translation.z = self.map_to_marker_transform.transform.translation.z  # A
+                transform.transform.translation.x = self.map_to_odom_transform.transform.translation.x
+                transform.transform.translation.y = self.map_to_odom_transform.transform.translation.y #- width            
         # transform.transform.rotation = self.map_to_odom_transform.transform.rotation  # Assuming 2D movement
         self.static_broadcaster.sendTransform(transform)
         self.get_logger().info(f'marker from robot is: ({median_x_301}, {median_y_301}, {median_z_301})')
         self.get_logger().info(f'robot is located: ({transform.transform.translation.x}, {transform.transform.translation.y})')
+        self.initial_transform = True
+        self.run = True
+        self.get_logger().info('Transform obtained successfully!')
+        self.req.message = "Found the marker! Now you should see the robot on the map"
+        self.req.error = False
+        self.rcs_send_msg_service.call_async(self.req)
         # self.get_logger().info(f'marker to odom Y for 301: {msg.pose.pose.position.y}')
         # # self.get_logger().info(f'marker to odom X for 301: {median_x_302}')
         # # self.get_logger().info(f'marker to odom Y for 301: {median_y_302}')

@@ -41,6 +41,7 @@ class InitialPoseSetter(Node):
         self.alpha_sub = self.create_subscription(Float32, "alpha", self.alpha_callback, qos_profile)
         self.color_print.print_in_purple("initial pose setter started!")
         self.now = time.time()
+        self.initial_publish = True
 
 
     def killNodes(self):
@@ -99,7 +100,11 @@ class InitialPoseSetter(Node):
         transform_stamped = TransformStamped()
         transform_stamped.header.stamp = self.get_clock().now().to_msg()
         transform_stamped.header.frame_id = "map"
-        transform_stamped.child_frame_id = "odom"
+        if self.initial_publish:
+            transform_stamped.child_frame_id = "initial_odom"
+            self.initial_publish = False
+        else:
+            transform_stamped.child_frame_id = "odom"
         transform_stamped.transform.translation = self.transform.transform.translation
         transform_stamped.transform.translation.z = 0.0
         transform_stamped.transform.rotation = self.transform.transform.rotation
