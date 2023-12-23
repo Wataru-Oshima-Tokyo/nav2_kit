@@ -3,7 +3,7 @@ bt_navigator:
     use_sim_time: true
     global_frame: world
     robot_base_frame: base_link
-    odom_topic: /dlio/odom_node/odom  #odometry/imu ##/ #odom
+    odom_topic: dlio/odom_node/odom  #odometry/imu ##/ #odom
     bt_loop_duration: 10
     default_server_timeout: 20
     # if you want to user your custom behavior tree goal, please put the absolute path here
@@ -133,7 +133,7 @@ local_costmap:
       plugins: ["obstacle_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: False
+        enabled: True
         observation_sources: scan
         scan:
           topic: /fake/scan_for_move

@@ -66,26 +66,28 @@ class NodeMonitor(Node):
         # self.get_logger().info('Discovered nodes: %s' % node_names_and_namespaces)
         if self.started:
             checkNodes = self.checkSomeNodes(node_names_and_namespaces)
+            if self.isPassedTime(5) and checkNodes and not self.is_all_nodes_ros_alive(node_names_and_namespaces):
+                req = SendMsg.Request()
+                req.message = "Failed to find witmotion node. Restarting soon"
+                req.error = True
+                self.rcs_send_msg_service.call_async(req)
+                time.sleep(3)
+                self.now = time.time()
+                self.startAction() 
             if self.isPassedTime(7) and checkNodes and not self.isPassedTime(10) and not self.initial_success:
                 req = SendMsg.Request()
                 req.message = "Succeded to run all the nodes"
                 req.error = False
                 self.rcs_send_msg_service.call_async(req)
                 self.initial_success = True
-            if self.isPassedTime(10) and checkNodes and not self.is_all_nodes_ros_alive(node_names_and_namespaces):
-                req = SendMsg.Request()
-                req.message = "Failed to find witmotion node. Restarting soon"
-                req.error = True
-                self.rcs_send_msg_service.call_async(req)
-                time.sleep(1)
-                self.startAction()  
+ 
 
 
         return node_names_and_namespaces
 
 
     def checkSomeNodes(self, nodes):
-        map_server = False
+        smoother_server = False
         dlio = False
         emcl2 = False
         for node_name, namespace in nodes:
@@ -93,9 +95,9 @@ class NodeMonitor(Node):
                 emcl2=True
             if 'dlio_map_node' in node_name:  # Adjust this check as per the exact name of your node
                 dlio=True
-            if 'map_server' in node_name:  # Adjust this check as per the exact name of your node
-                map_server=True
-        if emcl2 and dlio and map_server:
+            if 'smoother_server' in node_name:  # Adjust this check as per the exact name of your node
+                smoother_server=True
+        if emcl2 and dlio and smoother_server:
             return True
         return False
 
@@ -104,13 +106,13 @@ class NodeMonitor(Node):
         if self.sim or not self.imu_check:
             return True
         witmotion = False
-        dlio = False
+        map_server = False
         for node_name, namespace in nodes:
             if 'witmotion' in node_name:
                 witmotion=True
-            if 'dlio_map_node' in node_name:  # Adjust this check as per the exact name of your node
-                dlio=True
-        if dlio and witmotion:
+            if 'map_server' in node_name:  # Adjust this check as per the exact name of your node
+                map_server=True
+        if map_server and witmotion:
             return True
         return False
 
@@ -142,13 +144,13 @@ class NodeMonitor(Node):
         self.rcs_send_msg_service.call_async(req)
         command = f'gnome-terminal -- bash -c "cd {self.catmux_dict} && catmux_create_session {self.catmux_command}.yaml;"'
         subprocess.run(command, shell=True)
-        self.started = True
         self.now = time.time()
+        self.started = True
 
     def startAction(self):
         if self.started:
             self.killAll()
-            time.sleep(5)
+            time.sleep(2)
         self.startAll()
 
     def handle_startall(self, request, response):
@@ -200,6 +202,10 @@ class NodeMonitor(Node):
                     continue
                 elif 'daemon' in node_name:
                     continue
+                elif 'foxglove_bridge_component_manager' in node_name:
+                    continue
+                elif 'foxglove_bridge' in node_name:
+                    continue
                 else:
                     # If any other node is found, return False
                     self.color_print.print_in_yellow(nodes)
@@ -214,22 +220,23 @@ class NodeMonitor(Node):
 
 
         # Kill ROS related processes
-        cmd_ros = "ps aux | grep ros | grep -v grep | grep -v process_handler | grep -v detect_simple_server | grep -v robot_control | grep -v rcs_client_node | awk '{ print $2 }'"
+        cmd_ros = "ps aux | grep ros | grep -v grep | grep -v process_handler | grep -v foxglove_bridge_component_manager | grep -v foxglove_bridge | grep -v detect_simple_server | grep -v robot_control | grep -v rcs_client_node | awk '{ print $2 }'"
         sigint_processes(cmd_ros)
         
     
         # Polling to check if the nodes are still running
-        max_attempts = 60
+        max_attempts = 1
         attempt = 0
-        while attempt < max_attempts:
-            running_nodes = check_nodes(self.get_node_names_and_namespaces())
-            if running_nodes:  # If no nodes are running
-                break
-            time.sleep(1)  # Wait for 1 second before checking again
-            attempt += 1
-        cmd_ros = "ps aux | grep ros | grep -v grep | grep -v process_handler | grep -v detect_simple_server | grep -v robot_control | grep -v rcs_client_node | awk '{ print $2 }'"
+        # while attempt < max_attempts:
+        #     running_nodes = check_nodes(self.get_node_names_and_namespaces())
+        #     if running_nodes:  # If no nodes are running
+        #         break
+        #     time.sleep(1)  # Wait for 1 second before checking again
+        #     attempt += 1
+        time.sleep(1) 
+        cmd_ros = "ps aux | grep ros | grep -v grep  | grep -v foxglove_bridge_component_manager | grep -v foxglove_bridge  | grep -v process_handler | grep -v detect_simple_server | grep -v robot_control | grep -v rcs_client_node | awk '{ print $2 }'"
         kill_processes(cmd_ros)
-        time.sleep(3) 
+        time.sleep(1) 
         # Kill catmux related processes
         cmd_catmux = "ps aux | grep catmux | grep -v grep | grep -v process_handler | awk '{ print $2 }'"
         sigint_processes(cmd_catmux)

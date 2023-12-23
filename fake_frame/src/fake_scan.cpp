@@ -97,7 +97,7 @@ private:
     {
         try
         {
-            auto trans = tfBuffer_.lookupTransform("map", "base_link", rclcpp::Time());
+            auto trans = tfBuffer_.lookupTransform("map", "laser_link", rclcpp::Time());
             rclcpp::Time trans_time = trans.header.stamp;
 
             // Add a small delay, e.g., 100 milliseconds
