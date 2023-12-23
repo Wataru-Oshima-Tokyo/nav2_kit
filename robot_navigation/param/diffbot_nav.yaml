@@ -189,7 +189,7 @@ global_costmap:
       proxy_obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        observation_sources: scan scan_for_move
+        observation_sources:  scan_for_move #scan
         scan:
           topic: /fake/scan
           max_obstacle_height: 3.0

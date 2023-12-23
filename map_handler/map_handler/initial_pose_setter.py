@@ -30,12 +30,13 @@ class InitialPoseSetter(Node):
         self.srv = self.create_service(Trigger, 'kill_marker_tf', self.kill_nodes_callback)
         self.rcs_send_msg_service = self.create_client(SendMsg, "send_msg")
         self.emcl_tf_publish_set_service = self.create_client(Empty, "emcl_node_finish_")
-        self.init_pose_publisher_ = self.create_publisher(PoseWithCovarianceStamped, 'init_pose_set', 10)
+        self.init_pose_publisher_ = self.create_publisher(PoseWithCovarianceStamped, 'init_pose_set_for_emcl', 10)
         self.msg_req = SendMsg.Request()
         self.emcl_tf_req = Empty.Request()
         self.init_pose_check = False
         self.alpha_array = []
         # self.init_pose_sub = self.create_subscription(PoseWithCovarianceStamped, "init_pose_set", self.init_pose_callback, qos_profile)
+        self.init_pose_sub = self.create_subscription(PoseWithCovarianceStamped, 'init_pose_set', self.init_pose_callback, qos_profile)
         self.alpha_sub = self.create_subscription(Float32, "alpha", self.alpha_callback, qos_profile)
         self.color_print.print_in_purple("initial pose setter started!")
         self.now = time.time()
@@ -187,10 +188,9 @@ class InitialPoseSetter(Node):
 
 
     def init_pose_callback(self, msg):
-        self.transform = None
-        # self.killNodes()
-
-        # Fill the TransformStamped message
+        self.init_pose_check = True
+        self.alpha_array = []
+        self.init_pose_publisher_.publish(msg)
 
 
 

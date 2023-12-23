@@ -7,7 +7,7 @@
     base_frame_id: "base_link"
     footprint_frame_id: "base_footprint"
     scan_topic: "scan"
-    initialpose_topic: "init_pose_set"
+    initialpose_topic: "init_pose_set_for_emcl"
     laser_min_range: 0.0
     laser_max_range: 100000000.0
     scan_increment: 1

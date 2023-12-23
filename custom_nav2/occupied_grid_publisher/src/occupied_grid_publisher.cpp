@@ -36,14 +36,57 @@ public:
     send_request(true);
     prepareCostmap();
     // Timer for resetting the hash map.
-    // reset_timer_ = this->create_wall_timer(
-    //   std::chrono::seconds(5), std::bind(&OccupiedGridPublisher::resetHashMap, this));
+    reset_timer_ = this->create_wall_timer(
+      std::chrono::seconds(1), std::bind(&OccupiedGridPublisher::publuishOccupied_Cells, this));
 
 
     
   }
 
 private:
+
+    std::string createKey(double x, double y) {
+      int x_key = std::floor(x / threshold_);
+      int y_key = std::floor(y / threshold_);
+      std::stringstream ss;
+      ss << x_key << "," << y_key;
+      return ss.str();
+    }
+
+    void publuishOccupied_Cells() {
+      if (initial_costmap_flag) return;
+      std::lock_guard<std::mutex> lock(publish_mutex_);
+
+      std::vector<geometry_msgs::msg::Point> points_to_publish;
+      for (const auto& key : published_points_) {
+          double wx, wy;
+          if (parseKey(key, wx, wy)) {
+              geometry_msgs::msg::Point occupied_cell;
+              occupied_cell.x = wx;
+              occupied_cell.y = wy;
+              occupied_cell.z = 0.0;  // Assuming 2D, the z-coordinate is set to zero.
+              points_to_publish.push_back(occupied_cell);
+          }
+      }
+
+      if (!points_to_publish.empty()) {
+          point_array_msg.points = points_to_publish;
+          occupied_cells_publisher_->publish(point_array_msg);
+          RCLCPP_INFO(this->get_logger(), "\033[1;32m---->Published %zu occupied points\033[0m",  point_array_msg.points.size());
+      }
+    }
+
+    bool parseKey(const std::string& key, double& wx, double& wy) {
+        std::istringstream iss(key);
+        char delimiter;
+        int x_key, y_key;
+        if (iss >> x_key >> delimiter >> y_key && delimiter == ',') {
+            wx = x_key * threshold_;
+            wy = y_key * threshold_;
+            return true;
+        }
+        return false;
+    }
 
     void occupancyGridCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
       //do nothing but subscribe it
@@ -78,8 +121,27 @@ private:
         costmap_.metadata.size_y = response->map.metadata.size_y;
         costmap_.metadata.origin.position.x = response->map.metadata.origin.position.x; 
         costmap_.metadata.origin.position.y = response->map.metadata.origin.position.y; 
-        
-        initial_costmap_flag = false;
+
+        for (unsigned int my = 0; my < costmap_.metadata.size_y; ++my) {
+            for (unsigned int mx = 0; mx < costmap_.metadata.size_x; ++mx) {
+                // Calculate index for the data array
+                unsigned int i = mx + my * costmap_.metadata.size_x;
+
+                if (response->map.data[i] == 100) {  // Occupied cell
+                    // Convert grid coordinates to world coordinates.
+                    double wx = costmap_.metadata.origin.position.x + (mx + 0.5) * costmap_.metadata.resolution;
+                    double wy = costmap_.metadata.origin.position.y + (my + 0.5) * costmap_.metadata.resolution;
+                    RCLCPP_INFO(this->get_logger(), "\033[1;31m---->Register a key {%lf, %lf}\033[0m", wx, wy);
+
+                    std::string key = createKey(wx, wy);
+                    first_costmap_points_.insert(key);
+                }
+            }
+        }
+ 
+
+
+      initial_costmap_flag = false;
     }
 
 
@@ -88,10 +150,9 @@ private:
 
   void occupancyGridUpdateCallback(const map_msgs::msg::OccupancyGridUpdate::SharedPtr msg) {
     if (initial_costmap_flag) return;
-    // std::vector<geometry_msgs::msg::PointStamped> points_to_publish;
-    std::vector<geometry_msgs::msg::Point> points_to_publish;
+
+    std::lock_guard<std::mutex> lock(publish_mutex_);
     for (unsigned int i = 0; i < msg->data.size(); ++i) {
-      if (msg->data[i] == 100) {  // Occupied cell
         // Convert index to 2D grid coordinates.
         unsigned int mx = (i % msg->width) + msg->x;
         unsigned int my = (i / msg->width) + msg->y;
@@ -100,17 +161,24 @@ private:
         double wx = costmap_.metadata.origin.position.x + (mx + 0.5) * costmap_.metadata.resolution;
         double wy = costmap_.metadata.origin.position.y + (my + 0.5) * costmap_.metadata.resolution;
 
-        geometry_msgs::msg::Point occupied_cell;
-        occupied_cell.x = wx;
-        occupied_cell.y = wy;
-        points_to_publish.push_back(occupied_cell);
-      }
+        std::string key = createKey(wx, wy);
+        if (msg->data[i] == 100) {  // Occupied cell
+          if (first_costmap_points_.find(key) == first_costmap_points_.end()
+              && published_points_.find(key) == published_points_.end()) {
+            // Publish the occupied cell point.
+            // RCLCPP_INFO(this->get_logger(), "\033[1;32m---->Register a key {%lf, %lf}\033[0m", wx, wy);
+
+            published_points_.insert(key);
+          }
+        }else if (msg->data[i] <= 0.01){
+          if (published_points_.find(key) != published_points_.end()) {
+            // Publish the occupied cell point.
+            // RCLCPP_INFO(this->get_logger(), "\033[1;31m---->Remove a key {%lf, %lf}\033[0m", wx, wy);
+            published_points_.erase(key);
+          }
+        }
     }
-    if (!points_to_publish.empty()) {
-      point_array_msg.points = points_to_publish;
-      occupied_cells_publisher_->publish(point_array_msg);
-      RCLCPP_INFO(this->get_logger(), "Published %zu occupied points", point_array_msg.points.size());
-    }
+
   }
 
 
@@ -170,7 +238,13 @@ private:
   tf2_ros::TransformListener tf_listener_;
   techshare_ros_pkg2::msg::PointArray point_array_msg;
   bool initial_costmap_flag = true;
+  double threshold_ = 0.3;  // Define a threshold, for example 10 cm.  
   bool use_sim_time_;
+  rclcpp::TimerBase::SharedPtr reset_timer_;
+  std::unordered_set<std::string> published_points_;
+  std::unordered_set<std::string> first_costmap_points_;
+  std::mutex publish_mutex_;
+  // std::vector<geometry_msgs::msg::Point> points_to_publish;
   // double threshold_ = 0.15;  // Define a threshold, for example 10 cm.
   rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr scan_for_move_client_;
   rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr scan_client_;
