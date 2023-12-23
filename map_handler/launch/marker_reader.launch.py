@@ -55,14 +55,14 @@ def launch_setup(context, *args, **kwargs):
             arguments=args
     )
 
-    dynamic_marker_to_odom_node =  Node(
-        package='map_handler',
-        executable='marker_localization',
-        name='marker_localization_node',
-        respawn=False,
-        output='screen',
-        parameters=[{'use_sim_time': use_sim_time}]
-    )
+    # dynamic_marker_to_odom_node =  Node(
+    #     package='map_handler',
+    #     executable='marker_localization',
+    #     name='marker_localization_node',
+    #     respawn=False,
+    #     output='screen',
+    #     parameters=[{'use_sim_time': use_sim_time}]
+    # )
     apriltag_node =         Node(
             package='apriltag_ros',
             executable='apriltag_node',
@@ -78,7 +78,7 @@ def launch_setup(context, *args, **kwargs):
                 name='emcl2',
                 package='emcl2',
                 executable='emcl2_node',
-                parameters=[emcl_param_file],
+                parameters=[emcl_param_file, {"use_sim_time": use_sim_time}],
                 output='screen'
         )
     initial_pose_setter_node = Node(
@@ -89,7 +89,7 @@ def launch_setup(context, *args, **kwargs):
     )
     return [
         static_map_to_marker_node,
-        dynamic_marker_to_odom_node,
+        # dynamic_marker_to_odom_node,
         apriltag_node,
         emcl_node,
         initial_pose_setter_node

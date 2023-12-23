@@ -192,7 +192,7 @@ global_costmap:
         observation_sources: fake_scan_for_move #scan_for_move
         fake_scan_for_move:
           topic: /fake/scan_for_move
-          max_obstacle_height: 1000.0
+          max_obstacle_height: 8.0
           clearing: True
           marking: True
           data_type: "LaserScan"

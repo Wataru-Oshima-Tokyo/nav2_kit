@@ -72,9 +72,9 @@ class MarkerLcalization(Node):
                 msg.pose.pose.position.x = self.map_to_marker_transform.transform.translation.x #- median_x_301
                 msg.pose.pose.position.y = self.map_to_marker_transform.transform.translation.y #- median_y_301
                 msg.pose.pose.position.z = 0.0
-                msg.pose.pose.orientation.x = 0.0
-                msg.pose.pose.orientation.y = 0.0
-                msg.pose.pose.orientation.z = 0.0
+                msg.pose.pose.orientation.x = self.map_to_marker_transform.transform.rotation.x 
+                msg.pose.pose.orientation.y = self.map_to_marker_transform.transform.rotation.y 
+                msg.pose.pose.orientation.z = self.map_to_marker_transform.transform.rotation.z 
                 msg.pose.pose.orientation.w = 1.0
                 self.init_pose_publisher_.publish(msg)
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
