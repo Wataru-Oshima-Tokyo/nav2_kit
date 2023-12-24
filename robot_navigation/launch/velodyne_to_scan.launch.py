@@ -58,6 +58,7 @@ def generate_launch_description():
             parameters=[{'target_topic': "scan"}]    
     )
 
+
     return LaunchDescription([
         min_height_for_move_arg,
         use_sim_time_arg,
@@ -134,15 +135,6 @@ def generate_launch_description():
             }],
             name='pointcloud_to_laserscan_for_move'
         ),
-        #  Node(
-        # package='occupied_grid_publisher',
-        # executable='safety_costmap',
-        # name='safety_costmap',
-        #     parameters=[{
-        #         'target_topic': "fake/scan_for_move",
-        #         'use_sim_time': LaunchConfiguration('use_sim_time'),
-        #     }]    
-        # ),   
         fake_scan_move,
         fake_scan,
         occupied_cell_node,

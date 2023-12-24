@@ -51,7 +51,7 @@ class MarkerLcalization(Node):
         self.map_to_odom_fetched = False
         self.dlio_wait = True
         self.found_marker = False 
-        self.run = True
+        self.run_ = True
         self.now = time.time()
 
 
@@ -85,7 +85,7 @@ class MarkerLcalization(Node):
         if self.dlio_wait:  # Check if transform is not fetched yet
             try:
                 # Get the transform from "map" to "marker"
-                odom_base_link_transform = self.tf_buffer.lookup_transform('odom', 'base_link', rclpy.time.Time())
+                odom_base_link_transform = self.tf_buffer.lookup_transform('dlio_odom', 'base_link', rclpy.time.Time())
                 self.get_logger().info('Odom to base_link Transform obtained successfully!')
                 # Set the flag to True after successfully fetching the transform
                 self.dlio_wait = False
@@ -103,7 +103,7 @@ class MarkerLcalization(Node):
 
 
     def run(self):
-        if self.run:
+        if self.run_:
             try:
                 # Get the transform from "map" to "marker"
                 if self.dlio_wait:
@@ -116,7 +116,7 @@ class MarkerLcalization(Node):
                     self.get_logger().info('\033[94m' + 'The number of 301 array is : %d' %len(self.array_301) + '\033[0m')
                     self.found_marker = True
                     return 
-                self.run = False
+                self.run_ = False
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
                 self.get_logger().error('Error looking up transform: %s' % e)
                 if self.transform_fetched and not self.initial_transform and self.isPassedTime(2) and not self.isPassedTime(5):
@@ -127,7 +127,7 @@ class MarkerLcalization(Node):
                     self.req.message = "Cannot find the marker for 10 seconds..."
                     self.req.error = True
                     self.rcs_send_msg_service.call_async(self.req)
-                    self.run = False
+                    self.run_ = False
 
     def lookup_transform_for_map_to_odom(self):
         if not self.map_to_odom_fetched:  # Check if transform is not fetched yet
@@ -164,7 +164,7 @@ class MarkerLcalization(Node):
         transform = TransformStamped()
         transform.header.stamp = self.get_clock().now().to_msg()
         transform.header.frame_id = "map"
-        transform.child_frame_id = "odom"
+        transform.child_frame_id = "dlio_odom"
         if self.found_marker:
             if not self.use_sim_time_:
                 transform.transform.translation.x = self.map_to_marker_transform.transform.translation.x - median_z_301#depth
@@ -182,7 +182,7 @@ class MarkerLcalization(Node):
         self.get_logger().info(f'marker from robot is: ({median_x_301}, {median_y_301}, {median_z_301})')
         self.get_logger().info(f'robot is located: ({transform.transform.translation.x}, {transform.transform.translation.y})')
         self.initial_transform = True
-        self.run = True
+        self.run_ = True
         self.get_logger().info('Transform obtained successfully!')
         self.req.message = "Found the marker! Now you should see the robot on the map"
         self.req.error = False

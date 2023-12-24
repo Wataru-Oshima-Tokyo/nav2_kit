@@ -44,7 +44,7 @@ class InitialPoseSetter(Node):
         self.dlio_wait = True
         self.clear_costmap_flag = True
         self.transform_fetched = False
-        self.nav = BasicNavigator()
+        # self.nav = BasicNavigator()
         self.timer1 = self.create_timer(1, self.map_to_odom_checker)  # Check node status every 2 seconds
         self.timer2 = self.create_timer(1, self.lookup_transform_for_map_to_marker)  
         # self.timer3 = self.create_timer(2, self.call_clear_costmap)  
@@ -62,6 +62,7 @@ class InitialPoseSetter(Node):
 
     def lookup_transform_for_map_to_marker(self):
         if self.dlio_wait:
+            self.get_logger().info('Waiting for dlio started!')
             return
         if not self.transform_fetched:  # Check if transform is not fetched yet
             try:
@@ -95,8 +96,8 @@ class InitialPoseSetter(Node):
     def lookup_transform_for_map_to_odom(self):
             try:
                 # Get the transform from "map" to "marker"
-                self.map_to_odom_transform = self.tf_buffer.lookup_transform('map', 'odom', rclpy.time.Time())
-                self.get_logger().info('Map to odom Transform obtained successfully!')
+                self.map_to_odom_transform = self.tf_buffer.lookup_transform('map', 'dlio_odom', rclpy.time.Time())
+                self.get_logger().info('Map to dlio_odom Transform obtained successfully!')
                 # Set the flag to True after successfully fetching the transform
                 return True
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
@@ -106,7 +107,7 @@ class InitialPoseSetter(Node):
         if self.dlio_wait:  # Check if transform is not fetched yet
             try:
                 # Get the transform from "map" to "marker"
-                odom_base_link_transform = self.tf_buffer.lookup_transform('odom', 'base_link', rclpy.time.Time())
+                odom_base_link_transform = self.tf_buffer.lookup_transform('dlio_odom', 'base_link', rclpy.time.Time())
                 self.get_logger().info('Odom to base_link Transform obtained successfully!')
                 # Set the flag to True after successfully fetching the transform
                 self.dlio_wait = False
@@ -153,7 +154,7 @@ class InitialPoseSetter(Node):
         #     transform_stamped.child_frame_id = "initial_odom"
         #     self.initial_publish = False
         # else:
-        transform_stamped.child_frame_id = "odom"
+        transform_stamped.child_frame_id = "dlio_odom"
         transform_stamped.transform.translation = self.transform.transform.translation
         transform_stamped.transform.translation.z = 0.0
         transform_stamped.transform.rotation = self.transform.transform.rotation
