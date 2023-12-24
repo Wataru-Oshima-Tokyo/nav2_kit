@@ -16,28 +16,12 @@
 #include "nav2_msgs/msg/costmap.hpp"
 #include "nav2_msgs/srv/get_costmap.hpp"
 #include <tf2/LinearMath/Quaternion.h>
+#include "nav2_costmap_2d/costmap_2d.hpp"
+#include "nav2_costmap_2d/cost_values.hpp"
+#include "pluginlib/class_loader.hpp"
+#include "nav2_costmap_2d/layer.hpp"
+#include "nav2_costmap_2d/layered_costmap.hpp"
 
-#include <functional>
-
-namespace std {
-    template <>
-    struct hash<geometry_msgs::msg::Point> {
-        std::size_t operator()(const geometry_msgs::msg::Point& p) const {
-            std::size_t seed = 0;
-            hash_combine(seed, p.x);
-            hash_combine(seed, p.y);
-            hash_combine(seed, p.z);
-            return seed;
-        }
-
-        // Helper function to combine hash values
-        template <class T>
-        static void hash_combine(std::size_t& seed, const T& v) {
-            std::hash<T> hasher;
-            seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-        }
-    };
-}
 
 class ScanToCostmap : public rclcpp::Node
 {
@@ -61,7 +45,7 @@ public:
         auto custom_qos = rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable();
         // costmap_client_ = this->create_client<nav2_msgs::srv::GetCostmap>("/global_costmap/get_costmap");
         costmap_client_ = this->create_client<nav2_msgs::srv::GetCostmap>("/global_costmap/get_costmap");
-        costmap_update_pub_ = this->create_publisher<map_msgs::msg::OccupancyGridUpdate>("/global_costmap/costmap_updates", custom_qos);
+        costmap_update_pub_ = this->create_publisher<map_msgs::msg::OccupancyGridUpdate>("/global_costmap/costmap_updates_safety", custom_qos);
         // costmap_raw_ = nav2_msgs::msg::Costmap>();
         prepareCostmap();
 
@@ -69,7 +53,7 @@ public:
         timer_ = this->create_wall_timer(
             std::chrono::milliseconds(100),  // Adjust the duration as needed
             std::bind(&ScanToCostmap::run, this));
-        //
+        // run_ = true;
     }
 
 private:
@@ -102,8 +86,27 @@ private:
         costmap_.metadata.size_y = response->map.metadata.size_y;
         costmap_.metadata.origin.position.x = response->map.metadata.origin.position.x; 
         costmap_.metadata.origin.position.y = response->map.metadata.origin.position.y; 
-        costmap_.data = response->map.data;
+
+
+        // here I need to convert costmap to costmap2d such as 
+            // Initialize costmap_2d_ with the received costmap data
+    // Dynamically create a new Costmap2D with the received costmap data
+        costmap_2d_ = std::make_unique<nav2_costmap_2d::Costmap2D>(
+            response->map.metadata.size_x,
+            response->map.metadata.size_y,
+            response->map.metadata.resolution,
+            response->map.metadata.origin.position.x,
+            response->map.metadata.origin.position.y
+        );
+
+        // Optionally, set the default cost values
+        for (unsigned int i = 0; i < costmap_2d_->getSizeInCellsX(); i++) {
+            for (unsigned int j = 0; j < costmap_2d_->getSizeInCellsY(); j++) {
+                costmap_2d_->setCost(i, j, nav2_costmap_2d::FREE_SPACE);
+            }
+        }
         run_ = true;
+ 
 
 
     }
@@ -132,6 +135,7 @@ private:
 		}
         if (get_pose()){
             // updateBounds(current_pose.pose.position.x, current_pose.pose.position.y, robot_yaw, &min_x, &min_y, &max_x, &max_y);
+            
             updateCostmapWithPoints(transformScanToMap(scan));
             RCLCPP_INFO(this->get_logger(), "transformScanToMap is Done");
         }
@@ -192,81 +196,44 @@ private:
             points_in_map.push_back(point);
         }
 
-
-        return getCurrentPoints(points_in_map);
-
-        // return points_in_map;
+        return points_in_map;
     }
 
-    std::vector<geometry_msgs::msg::Point> getCurrentPoints(std::vector<geometry_msgs::msg::Point>& points_in_map){
-        for (const auto& point : points_in_map) {
-            // Inflate points by creating additional points around the original point
-            for (double dx = -0.2; dx <= 0.2; dx += 0.1) { // Adjust step and range for desired inflation
-                for (double dy = -0.2; dy <= 0.2; dy += 0.1) {
-                    geometry_msgs::msg::Point inflated_point;
-                    inflated_point.x = point.x + dx;
-                    inflated_point.y = point.y + dy;
-                    inflated_point.z = 0.0;
+    // void updateCostmapWithPoints(const std::vector<geometry_msgs::msg::Point>& points_in_map) {
+    //     // Determine the area of the costmap to update
+    //     int min_x = std::numeric_limits<int>::max();
+    //     int min_y = std::numeric_limits<int>::max();
+    //     int max_x = std::numeric_limits<int>::min();
+    //     int max_y = std::numeric_limits<int>::min();
 
-                    // Track the lifespan of the inflated point
-                    point_lifespan_map[inflated_point] = std::chrono::steady_clock::now();
-                }
-            }
-        }
+    //     for (const auto& point : points_in_map) {
+    //         // Convert world coordinates to grid coordinates
+    //         int grid_x = static_cast<int>(std::floor((point.x - map_.info.origin.position.x) / map_.info.resolution));
+    //         int grid_y = static_cast<int>(std::floor((point.y - map_.info.origin.position.y) / map_.info.resolution));
 
-        // Remove points that are older than 3 seconds from the lifespan map
-        auto now = std::chrono::steady_clock::now();
-        for (auto it = point_lifespan_map.begin(); it != point_lifespan_map.end();) {
-            if (std::chrono::duration_cast<std::chrono::seconds>(now - it->second).count() > 3) {
-                it = point_lifespan_map.erase(it);
-            } else {
-                ++it;
-            }
-        }
-        
-        
-        
-        std::vector<geometry_msgs::msg::Point> current_points;
-        
-        for (const auto& item : point_lifespan_map) {
-            current_points.push_back(item.first);
-        }
-        return current_points;
-    }
+    //         // Update the bounding box
+    //         min_x = std::min(min_x, grid_x);
+    //         min_y = std::min(min_y, grid_y);
+    //         max_x = std::max(max_x, grid_x);
+    //         max_y = std::max(max_y, grid_y);
+    //     }
 
+    //     // Update the costmap
+    //     int width = max_x - min_x + 1;
+    //     int height = max_y - min_y + 1;
+    //     std::vector<int8_t> data(width * height, -1);  // Initialize data with unknown (-1)
 
-    void updateCostmapWithPoints(const std::vector<geometry_msgs::msg::Point>& points_in_map) {
-        // Convert robot's position to grid coordinates
-        int robot_grid_x = static_cast<int>(std::floor((current_pose.pose.position.x - map_.info.origin.position.x) / map_.info.resolution));
-        int robot_grid_y = static_cast<int>(std::floor((current_pose.pose.position.y - map_.info.origin.position.y) / map_.info.resolution));
+    //     for (const auto& point : points_in_map) {
+    //         int grid_x = static_cast<int>(std::floor((point.x - map_.info.origin.position.x) / map_.info.resolution));
+    //         int grid_y = static_cast<int>(std::floor((point.y - map_.info.origin.position.y) / map_.info.resolution));
 
-        // Calculate bounds for a 10-meter radius around the robot
-        int radius_in_cells = static_cast<int>(10 / map_.info.resolution); // 10 meters to cells
-        int min_x = std::max(0, robot_grid_x - radius_in_cells);
-        int max_x = std::min(static_cast<int>(map_.info.width), robot_grid_x + radius_in_cells);
-        int min_y = std::max(0, robot_grid_y - radius_in_cells);
-        int max_y = std::min(static_cast<int>(map_.info.height), robot_grid_y + radius_in_cells);
+    //         int index = (grid_x - min_x) + (grid_y - min_y) * width;
+    //         data[index] = 100;  // Mark as occupied
+    //     }
 
-        // Initialize data for costmap update
-        int width = max_x - min_x + 1;
-        int height = max_y - min_y + 1;
-        std::vector<int8_t> data(width * height, -1); // Initialize with unknown (-1)
-
-        // Update the costmap within the bounds
-        for (const auto& point : points_in_map) {
-            int grid_x = static_cast<int>((point.x - map_.info.origin.position.x) / map_.info.resolution);
-            int grid_y = static_cast<int>((point.y - map_.info.origin.position.y) / map_.info.resolution);
-
-            if (grid_x >= min_x && grid_x <= max_x && grid_y >= min_y && grid_y <= max_y) {
-                int index = (grid_x - min_x) + (grid_y - min_y) * width;
-                // costmap_.data[index] = 100; // Mark as occupied
-                data[index] = 100;
-            }
-        }
-
-        // Publish the costmap update
-        publishCostmapUpdate(min_x, min_y, width, height, data);
-    }
+    //     // Publish the costmap update
+    //     publishCostmapUpdate(min_x, min_y, width, height, data);
+    // }
 
     void publishCostmapUpdate(int x, int y, int width, int height, const std::vector<int8_t>& data) {
         auto update_msg = std::make_unique<map_msgs::msg::OccupancyGridUpdate>();
@@ -284,6 +251,61 @@ private:
         costmap_update_pub_->publish(std::move(update_msg));
     }
 
+    void updateCostmapWithPoints(const std::vector<geometry_msgs::msg::Point>& points_in_map) {
+        // minx_ = miny_ = std::numeric_limits<double>::max();
+        // maxx_ = maxy_ = std::numeric_limits<double>::lowest();
+        // plugin->updateBounds(current_pose.pose.position.x, current_pose.pose.position.y, robot_yaw, &minx_, &miny_, &maxx_, &maxy_);
+        // int x0, xn, y0, yn;
+        // costmap_2d_->worldToMapEnforceBounds(minx_, miny_, x0, y0);
+        // costmap_2d_->worldToMapEnforceBounds(maxx_, maxy_, xn, yn);
+        double update_radius = 5.0;  // 5 meters radius
+
+        // Calculate world coordinates bounds around the robot
+        minx_ = current_pose.pose.position.x - update_radius;
+        miny_ = current_pose.pose.position.y - update_radius;
+        maxx_ = current_pose.pose.position.x + update_radius;
+        maxy_ = current_pose.pose.position.y + update_radius;
+
+        // Convert world coordinates to costmap grid coordinates
+        int x0, xn, y0, yn;
+        costmap_2d_->worldToMapEnforceBounds(minx_, miny_, x0, y0);
+        costmap_2d_->worldToMapEnforceBounds(maxx_, maxy_, xn, yn);
+        x0 = std::max(0, x0);
+        xn = std::min(static_cast<int>(costmap_2d_->getSizeInCellsX()), xn + 1);
+        y0 = std::max(0, y0);
+        yn = std::min(static_cast<int>(costmap_2d_->getSizeInCellsY()), yn + 1);
+        for (const auto& point : points_in_map) {
+            unsigned int mx, my;
+            // Manual conversion from map coordinates to costmap grid indices
+            mx = static_cast<int>((point.x - costmap_2d_->getOriginX()) / costmap_2d_->getResolution());
+            my = static_cast<int>((point.y - costmap_2d_->getOriginY()) / costmap_2d_->getResolution());
+
+            if (mx < costmap_2d_->getSizeInCellsX() && my < costmap_2d_->getSizeInCellsY()) {
+                costmap_2d_->setCost(mx, my, nav2_costmap_2d::LETHAL_OBSTACLE);
+                RCLCPP_INFO(this->get_logger(), "Set cost at grid coordinates (%u, %u)", mx, my);
+            } else {
+                RCLCPP_WARN(this->get_logger(), "Point (%lf, %lf) is out of costmap bounds", point.x, point.y);
+            }
+            
+        }
+        plugin->updateCosts(*costmap_2d_, x0, y0, xn, yn);
+    }
+
+    void getBounds(unsigned int * x0, unsigned int * xn, unsigned int * y0, unsigned int * yn)
+    {
+        *x0 = bx0_;
+        *xn = bxn_;
+        *y0 = by0_;
+        *yn = byn_;
+    }
+
+    void updateBounds(unsigned int x0, unsigned int xn, unsigned int y0, unsigned int yn)
+    {
+        x0_ = std::min(x0, x0_);
+        xn_ = std::max(xn, xn_);
+        y0_ = std::min(y0, y0_);
+        yn_ = std::max(yn, yn_);
+    }
 
     bool get_pose() {
         try {
@@ -322,6 +344,7 @@ private:
 
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_subscriber_;
     rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_publisher_;
+    rclcpp::Publisher<nav2_msgs::msg::Costmap>::SharedPtr costmap_raw_pub_;
     rclcpp::Client<nav2_msgs::srv::GetCostmap>::SharedPtr costmap_client_;
     rclcpp::Publisher<map_msgs::msg::OccupancyGridUpdate>::SharedPtr costmap_update_pub_;
 	rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;
@@ -329,6 +352,7 @@ private:
 
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
+    nav_msgs::msg::OccupancyGrid grid_;
     geometry_msgs::msg::TransformStamped transform_stamped;
     geometry_msgs::msg::PoseStamped current_pose;
     bool use_sim_time_;
@@ -343,13 +367,21 @@ private:
     bool scan_receive_ = false;
     bool map_receive_ = false;
     double robot_yaw;
-    std::unordered_map<geometry_msgs::msg::Point, std::chrono::steady_clock::time_point> point_lifespan_map;
-
+    int min_x = std::numeric_limits<int>::max();
+    int min_y = std::numeric_limits<int>::max();
+    int max_x = std::numeric_limits<int>::min();
+    int max_y = std::numeric_limits<int>::min();
+    std::vector<float, std::allocator<float>> ranges;
     // float range_min, range_max, angle_min, angle_max;
     nav2_msgs::msg::Costmap costmap_;
     nav_msgs::msg::OccupancyGrid map_;
     unsigned int x0_, xn_, y0_, yn_;
     unsigned int bx0_, bxn_, by0_, byn_;
+    double minx_, miny_, maxx_, maxy_;
+    std::unique_ptr<nav2_costmap_2d::Costmap2D> costmap_2d_;
+    pluginlib::ClassLoader<nav2_costmap_2d::Layer> plugin_loader_{"nav2_costmap_2d", "nav2_costmap_2d::Layer"};
+    std::shared_ptr<nav2_costmap_2d::Layer> plugin = plugin_loader_.createSharedInstance("nav2_costmap_2d::ObstacleLayer");
+
 };
 
 int main(int argc, char *argv[])

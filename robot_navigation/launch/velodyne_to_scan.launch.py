@@ -58,6 +58,7 @@ def generate_launch_description():
             parameters=[{'target_topic': "scan"}]    
     )
 
+
     return LaunchDescription([
         min_height_for_move_arg,
         use_sim_time_arg,
@@ -75,7 +76,7 @@ def generate_launch_description():
                 'target_frame': 'laser_link',
                 'transform_tolerance': 0.01,
                 'min_height': 0.0,
-                'max_height': 2.0,
+                'max_height': 4.0,
                 'angle_min': -math.pi,
                 'angle_max': math.pi,
                 'angle_increment': 0.0087,  # M_PI/360.0
@@ -119,7 +120,7 @@ def generate_launch_description():
                 'target_frame': 'laser_link',
                 'transform_tolerance': 0.01,
                 'min_height': min_height_for_move_,
-                'max_height': 1.0,
+                'max_height': 3.0,
                 'angle_min': -math.pi,
                 'angle_max': math.pi,
                 'angle_increment': 0.0087,  # M_PI/360.0
@@ -134,15 +135,6 @@ def generate_launch_description():
             }],
             name='pointcloud_to_laserscan_for_move'
         ),
-        #  Node(
-        # package='occupied_grid_publisher',
-        # executable='safety_costmap',
-        # name='safety_costmap',
-        #     parameters=[{
-        #         'target_topic': "fake/scan_for_move",
-        #         'use_sim_time': LaunchConfiguration('use_sim_time'),
-        #     }]    
-        # ),   
         fake_scan_move,
         fake_scan,
         occupied_cell_node,

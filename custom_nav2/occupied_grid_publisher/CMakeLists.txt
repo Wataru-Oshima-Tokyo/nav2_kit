@@ -24,6 +24,7 @@ find_package(nav2_msgs REQUIRED)
 
 add_executable(occupied_grid_publisher src/occupied_grid_publisher.cpp)
 add_executable(safety_costmap src/safety_costmap.cpp)
+add_executable(sample_random_costmap src/sample_random_costmap.cpp)
 
 # It's important to place this after the custom message generation
 
@@ -44,12 +45,14 @@ set(dependencies
 
 ament_target_dependencies(occupied_grid_publisher ${dependencies})
 ament_target_dependencies(safety_costmap ${dependencies})
+ament_target_dependencies(sample_random_costmap ${dependencies})
 
 # You should depend on the message generation before building the executable
 
 install(TARGETS
   occupied_grid_publisher
   safety_costmap
+  sample_random_costmap
   DESTINATION lib/${PROJECT_NAME}
 )
 

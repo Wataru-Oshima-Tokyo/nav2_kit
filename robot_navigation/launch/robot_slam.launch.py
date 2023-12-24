@@ -47,12 +47,12 @@ def generate_launch_description():
     # )
 
     
-    # static_base_footprint_to_laser_link =  Node(
-    #         package='tf2_ros',
-    #         executable='static_transform_publisher',
-    #         name='base_footprint_to_laser_link',
-    #         arguments=['0', '0', '0', '0', '0', '0', '1', 'map', 'odom']
-    # )
+    static_map_to_dlio_odom_link =  Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='base_footprint_to_laser_link',
+            arguments=['0', '0', '0', '0', '0', '0', '1', 'map', 'dlio_odom']
+    )
 
 
     return LaunchDescription([
@@ -94,12 +94,5 @@ def generate_launch_description():
             parameters=[{'use_sim_time': LaunchConfiguration("sim")}]
         ),
         # static_base_footprint_to_laser_link
-        Node(
-        package='fake_frame',
-        executable='fake_dynamic_tf_broadcaster',
-        name='fake_odom',
-            parameters=[{'parent_link': "map"},
-                        {'child_link': "odom"},
-                        {"use_sim_time": LaunchConfiguration("sim")}]    
-        )
+        # static_map_to_dlio_odom_link
     ])
