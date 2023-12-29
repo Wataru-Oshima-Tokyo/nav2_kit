@@ -39,3 +39,6 @@
 [submodule "ros_here"]
 	path = ros_here
 	url = https://github.com/TechShare-inc/ros_here.git
+[submodule "HesaiLidar_ROS_2.0"]
+	path = HesaiLidar_ROS_2.0
+	url = https://github.com/TechShare-inc/HesaiLidar_ROS_2.0.git
