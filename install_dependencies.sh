@@ -44,7 +44,8 @@ sudo apt update -q && sudo apt install -y \
   ros-humble-nav2* \
   ros-humble-realsense* \
   ros-humble-apriltag-ros \
-  ros-humble-rmw-cyclonedds-cpp 
+  ros-humble-rmw-cyclonedds-cpp \
+  ros-humble-rosidl-generator-dds-idl
 
 
 python3 -m pip install --upgrade pip
