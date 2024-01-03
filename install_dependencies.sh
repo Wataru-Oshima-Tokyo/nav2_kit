@@ -51,5 +51,12 @@ sudo apt update -q && sudo apt install -y \
 python3 -m pip install --upgrade pip
 python3 -m pip install transforms3d websocket-client catmux distro numpy opencv-python depthai numpy pyttsx3 
 
-sudo add-apt-repository ppa:borglab/gtsam-release-4.1 && \
-    sudo apt install -y  libgtsam-dev libgtsam-unstable-dev
+git cd $HOME && \
+    clone https://github.com/Livox-SDK/Livox-SDK2.git && \
+    cd ./Livox-SDK2 && \
+    mkdir build  && \
+    cd build && \
+    cmake .. && make -j && \
+    make install && \
+    cd ../.. && \
+    rm -rf Livox-SDK2
