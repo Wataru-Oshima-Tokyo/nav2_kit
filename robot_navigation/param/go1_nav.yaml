@@ -3,7 +3,7 @@ bt_navigator:
     use_sim_time: true
     global_frame: world
     robot_base_frame: base_link
-    odom_topic: dlio/odom_node/odom  #odometry/imu ##/ #odom
+    odom_topic: dlio/odom_node/odom  #dlio/odom_node/odom ##/ #odom
     bt_loop_duration: 10
     default_server_timeout: 20
     # if you want to user your custom behavior tree goal, please put the absolute path here
@@ -122,7 +122,7 @@ local_costmap:
     ros__parameters:
       update_frequency: 5.0 # 5.0
       publish_frequency: 2.0 #2.0
-      global_frame: odom
+      global_frame: dlio_odom
       robot_base_frame: base_link
       use_sim_time: true
       rolling_window: true
@@ -298,7 +298,7 @@ behavior_server:
       plugin: "nav2_behaviors/Wait"
     assisted_teleop:
       plugin: "nav2_behaviors/AssistedTeleop"
-    global_frame: odom
+    global_frame: dlio_odom
     robot_base_frame: base_link
     transform_tolerance: 0.1
     use_sim_time: true

@@ -39,3 +39,21 @@
 [submodule "ros_here"]
 	path = ros_here
 	url = https://github.com/TechShare-inc/ros_here.git
+[submodule "HesaiLidar_ROS_2.0"]
+	path = HesaiLidar_ROS_2.0
+	url = https://github.com/TechShare-inc/HesaiLidar_ROS_2.0.git
+[submodule "livox_ros_driver2"]
+	path = livox_ros_driver2
+	url = https://github.com/TechShare-inc/livox_ros_driver2.git
+[submodule "velodyne"]
+	path = velodyne
+	url = https://github.com/TechShare-inc/velodyne.git
+[submodule "rs_to_velodyne"]
+	path = rs_to_velodyne
+	url = https://github.com/TechShare-inc/rs_to_velodyne.git
+[submodule "witmotion_IMU_ros"]
+	path = witmotion_IMU_ros
+	url = https://github.com/TechShare-inc/witmotion_IMU_ros.git
+[submodule "rslidar_msg"]
+	path = rslidar_msg
+	url = https://github.com/RoboSense-LiDAR/rslidar_msg.git
